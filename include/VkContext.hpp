@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-constexpr uint32_t FRAMES_IN_FLIGHT = 2;
+constexpr uint32_t FRAMES_IN_FLIGHT = 3;
 #define VK_CHECK(x)                                                                                                    \
     do {                                                                                                               \
         VkResult r = (x);                                                                                              \
@@ -39,4 +39,5 @@ private:
     std::vector<VkSemaphore> m_renderFinished;
     std::vector<VkFence> m_inFlight;
     uint32_t m_frame = 0;
+    uint32_t m_imgIdx = 0;
 };

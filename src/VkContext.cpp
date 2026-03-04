@@ -1,5 +1,6 @@
 #include "VkContext.hpp"
 #include <VkBootstrap.h>
+#include <cstdint>
 #include "Logger.hpp"
 
 bool VkContext::init(GLFWwindow *handle) {
@@ -119,6 +120,69 @@ void VkContext::shutdown() {
     vkb::destroy_instance(m_instance);
 }
 
-VkCommandBuffer VkContext::beginFrame() { return VkCommandBuffer{}; }
+VkCommandBuffer VkContext::beginFrame() {
+    auto frame = m_frame % FRAMES_IN_FLIGHT;
+    // Waiting for the GPU to finish the last frame
+    vkWaitForFences(m_device, 1, &m_inFlight[frame], VK_TRUE, UINT64_MAX);
+    vkResetFences(m_device, 1, &m_inFlight[frame]);
 
-void VkContext::endFrame(VkCommandBuffer cmd) {}
+    // Recover swapchain image index
+    vkAcquireNextImageKHR(m_device, m_swapChain, UINT64_MAX, m_imageAvailable[frame], VK_NULL_HANDLE, &m_imgIdx);
+
+    // Reset the command buffer for the new frame
+    auto cmd = m_cmdBuffers[frame];
+    vkResetCommandBuffer(cmd, 0);
+
+    // Start to registers commands
+    VkCommandBufferBeginInfo begin{.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    vkBeginCommandBuffer(cmd, &begin);
+
+    auto images = m_swapChain.get_images().value();
+    VkImageMemoryBarrier barrier{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = 0,
+            .dstAccessMask = 0,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = images[m_imgIdx],
+            .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
+    };
+    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0,
+                         nullptr, 1, &barrier);
+
+    return cmd;
+}
+
+void VkContext::endFrame(VkCommandBuffer cmd) {
+    vkEndCommandBuffer(cmd);
+
+    auto frame = m_frame % FRAMES_IN_FLIGHT;
+
+    VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkSubmitInfo submit{
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &m_imageAvailable[frame],
+            .pWaitDstStageMask = &wait_stage,
+            .commandBufferCount = 1,
+            .pCommandBuffers = &cmd,
+            .signalSemaphoreCount = 1,
+            .pSignalSemaphores = &m_renderFinished[frame],
+    };
+    vkQueueSubmit(m_graphicsQueue, 1, &submit, m_inFlight[frame]);
+
+    // Present
+    VkPresentInfoKHR present{
+            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &m_renderFinished[frame],
+            .swapchainCount = 1,
+            .pSwapchains = &m_swapChain.swapchain,
+            .pImageIndices = &m_imgIdx,
+    };
+    vkQueuePresentKHR(m_presentQueue, &present);
+
+    ++m_frame;
+}
