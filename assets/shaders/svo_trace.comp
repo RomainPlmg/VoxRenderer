@@ -1,0 +1,13 @@
+#version 450
+layout(local_size_x = 8, local_size_y = 8) in;  // workgroup 8x8
+layout(rgba8, binding = 0) uniform image2D outputImage;
+
+void main() {
+    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size  = imageSize(outputImage);
+
+    if (pixel.x >= size.x || pixel.y >= size.y) return;
+
+    vec2 uv = vec2(pixel) / vec2(size);
+    imageStore(outputImage, pixel, vec4(uv, 0.0, 1.0));
+}

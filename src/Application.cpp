@@ -4,7 +4,9 @@
 
 #include "Input.hpp"
 #include "Logger.hpp"
+#include "Renderer.hpp"
 #include "VkContext.hpp"
+
 
 static Application *s_application = nullptr;
 
@@ -26,8 +28,9 @@ Application::Application(const ApplicationSpecification &specification) : m_spec
         m_specification.window_spec.title = m_specification.name;
     }
 
-    m_window = std::make_shared<Window>(m_specification.window_spec);
-    m_vkContext = std::make_shared<VkContext>();
+    m_window = std::make_unique<Window>(m_specification.window_spec);
+    m_vkContext = std::make_unique<VkContext>();
+    m_renderer = std::make_unique<Renderer>(*m_vkContext);
 
     // Init window
     m_window->init();
@@ -36,12 +39,18 @@ Application::Application(const ApplicationSpecification &specification) : m_spec
     if (!m_vkContext->init(m_window->getHandle())) {
         throw std::runtime_error("Failed to init Vulkan backend graphics API.");
     }
+    
+    // Init renderer
+    if (!m_renderer->init(m_specification.window_spec.width, m_specification.window_spec.height)) {
+        throw std::runtime_error("Failed to init renderer.");
+    }
 
     Input::init(*m_window);
 }
 
 Application::~Application() {
     m_layerStack.clear();
+    m_renderer->shutdown();
     m_vkContext->shutdown();
     m_window->destroy();
     glfwTerminate();
@@ -53,6 +62,11 @@ Application::~Application() {
 void Application::run() {
     m_running = true;
     float last_time = getTime();
+
+    // Attach all layers
+    for (auto &layer: m_layerStack) {
+        layer->onAttach(*m_vkContext, *m_renderer);
+    }
 
     // Main application loop
     while (m_running) {
@@ -76,7 +90,7 @@ void Application::run() {
 
         // NOTE: rendering can be done elsewhere (e.g. render thread)
         for (const auto &layer: m_layerStack) {
-            layer->onRender(cmd);
+            layer->onRender(cmd, *m_renderer);
         }
 
         m_vkContext->endFrame(cmd);

@@ -6,6 +6,7 @@
 #include "Window.hpp"
 
 class VkContext;
+class Renderer;
 
 struct ApplicationSpecification {
     std::string name = "Sparse Voxel Octree Engine";
@@ -36,13 +37,19 @@ public:
         return *m_window;
     }
 
+    [[nodiscard]] Renderer &getRenderer() const {
+        assert(m_renderer);
+        return *m_renderer;
+    }
+
     static Application &get();
     static float getTime();
 
 private:
     ApplicationSpecification m_specification;
-    std::shared_ptr<Window> m_window;
-    std::shared_ptr<VkContext> m_vkContext;
+    std::unique_ptr<Window> m_window;
+    std::unique_ptr<VkContext> m_vkContext;
+    std::unique_ptr<Renderer> m_renderer;
     std::vector<std::unique_ptr<Layer>> m_layerStack;
 
     bool m_running = true;

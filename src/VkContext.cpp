@@ -1,6 +1,4 @@
 #include "VkContext.hpp"
-#include <VkBootstrap.h>
-#include <cstdint>
 #include "Logger.hpp"
 
 bool VkContext::init(GLFWwindow *handle) {
@@ -50,6 +48,15 @@ bool VkContext::init(GLFWwindow *handle) {
         return false;
     }
     m_device = dev_ret.value();
+
+    VmaAllocatorCreateInfo vma_info{
+            .physicalDevice = m_device.physical_device.physical_device,
+            .device = m_device.device,
+            .instance = m_instance.instance,
+            .vulkanApiVersion = VK_API_VERSION_1_3,
+    };
+
+    VK_CHECK(vmaCreateAllocator(&vma_info, &m_allocator));
 
     // -- Graphics & Present Queue
     m_graphicsQueue = m_device.get_queue(vkb::QueueType::graphics).value();
@@ -115,6 +122,9 @@ void VkContext::shutdown() {
 
     vkDestroyCommandPool(m_device, m_cmdPool, nullptr);
     vkb::destroy_swapchain(m_swapChain);
+
+    vmaDestroyAllocator(m_allocator);
+
     vkb::destroy_device(m_device);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
     vkb::destroy_instance(m_instance);
@@ -185,4 +195,36 @@ void VkContext::endFrame(VkCommandBuffer cmd) {
     vkQueuePresentKHR(m_presentQueue, &present);
 
     ++m_frame;
+}
+
+void VkContext::submitOneShot(std::function<void(VkCommandBuffer)> fn) {
+    // Transition UNDEFINED → GENERAL
+    VkCommandBufferAllocateInfo alloc{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = m_cmdPool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1,
+    };
+    VkCommandBuffer cmd;
+    vkAllocateCommandBuffers(m_device, &alloc, &cmd);
+
+    VkCommandBufferBeginInfo begin{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    };
+    vkBeginCommandBuffer(cmd, &begin);
+
+    fn(cmd);
+
+    vkEndCommandBuffer(cmd);
+
+    VkSubmitInfo submit{
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .commandBufferCount = 1,
+            .pCommandBuffers = &cmd,
+    };
+    vkQueueSubmit(m_graphicsQueue, 1, &submit, VK_NULL_HANDLE);
+    vkQueueWaitIdle(m_graphicsQueue);
+
+    vkFreeCommandBuffers(m_device, m_cmdPool, 1, &cmd);
 }
