@@ -39,6 +39,11 @@ bool VkContext::init(GLFWwindow *handle) {
     }
 
     // --- Physical device
+    // Enable Vulkan 1.2 features
+    VkPhysicalDeviceVulkan12Features features12{
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+            .bufferDeviceAddress = VK_TRUE,
+    };
     // Enable Vulkan 1.3 features
     VkPhysicalDeviceVulkan13Features features13{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
@@ -49,6 +54,7 @@ bool VkContext::init(GLFWwindow *handle) {
     auto phys_ret = selector.set_surface(m_surface)
                             .set_minimum_version(1, 3)
                             .require_dedicated_transfer_queue()
+                            .set_required_features_12(features12)
                             .set_required_features_13(features13)
                             .select();
     if (!phys_ret) {
