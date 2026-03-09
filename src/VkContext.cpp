@@ -116,15 +116,18 @@ bool VkContext::init(GLFWwindow *handle) {
 
     // --- Sync primitives
     m_imageAvailable.resize(FRAMES_IN_FLIGHT);
-    m_renderFinished.resize(FRAMES_IN_FLIGHT);
+    m_renderFinished.resize(m_swapChain.image_count);
     m_inFlight.resize(FRAMES_IN_FLIGHT);
 
     VkSemaphoreCreateInfo sem_info{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     VkFenceCreateInfo fen_info{.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, .flags = VK_FENCE_CREATE_SIGNALED_BIT};
-    for (int i = 0; i < FRAMES_IN_FLIGHT; ++i) {
+    for (uint32_t i = 0; i < FRAMES_IN_FLIGHT; ++i) {
         VK_CHECK(vkCreateSemaphore(m_device, &sem_info, nullptr, &m_imageAvailable[i]));
-        VK_CHECK(vkCreateSemaphore(m_device, &sem_info, nullptr, &m_renderFinished[i]));
         VK_CHECK(vkCreateFence(m_device, &fen_info, nullptr, &m_inFlight[i]));
+    }
+
+    for (uint32_t i = 0; i < m_swapChain.image_count; ++i) {
+        VK_CHECK(vkCreateSemaphore(m_device, &sem_info, nullptr, &m_renderFinished[i]));
     }
 
     LOG_INFO("Vulkan initialized.");
@@ -134,10 +137,13 @@ bool VkContext::init(GLFWwindow *handle) {
 void VkContext::shutdown() {
     vkDeviceWaitIdle(m_device);
 
-    for (int i = 0; i < FRAMES_IN_FLIGHT; ++i) {
+    for (uint32_t i = 0; i < FRAMES_IN_FLIGHT; ++i) {
         vkDestroySemaphore(m_device, m_imageAvailable[i], nullptr);
-        vkDestroySemaphore(m_device, m_renderFinished[i], nullptr);
         vkDestroyFence(m_device, m_inFlight[i], nullptr);
+    }
+
+    for (uint32_t i = 0; i < m_swapChain.image_count; ++i) {
+        vkDestroySemaphore(m_device, m_renderFinished[i], nullptr);
     }
 
     vkDestroyCommandPool(m_device, m_cmdPool, nullptr);
@@ -199,7 +205,7 @@ void VkContext::endFrame(VkCommandBuffer cmd) {
             .commandBufferCount = 1,
             .pCommandBuffers = &cmd,
             .signalSemaphoreCount = 1,
-            .pSignalSemaphores = &m_renderFinished[frame],
+            .pSignalSemaphores = &m_renderFinished[m_imgIdx],
     };
     vkQueueSubmit(m_graphicsQueue, 1, &submit, m_inFlight[frame]);
 
@@ -207,7 +213,7 @@ void VkContext::endFrame(VkCommandBuffer cmd) {
     VkPresentInfoKHR present{
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .waitSemaphoreCount = 1,
-            .pWaitSemaphores = &m_renderFinished[frame],
+            .pWaitSemaphores = &m_renderFinished[m_imgIdx],
             .swapchainCount = 1,
             .pSwapchains = &m_swapChain.swapchain,
             .pImageIndices = &m_imgIdx,
