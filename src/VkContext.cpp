@@ -2,13 +2,10 @@
 #include "Logger.hpp"
 
 // Callback for validation layers
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageType,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* pUserData) 
-{
-    // On choisit le niveau de log en fonction de la sévérité Vulkan
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                                    VkDebugUtilsMessageTypeFlagsEXT messageType,
+                                                    const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+                                                    void *pUserData) {
     if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
         LOG_ERROR("Vulkan Validation: {}", pCallbackData->pMessage);
     } else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
@@ -17,7 +14,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         LOG_INFO("Vulkan Validation: {}", pCallbackData->pMessage);
     }
 
-    // On retourne toujours VK_FALSE (VK_TRUE forcerait l'appel à échouer)
     return VK_FALSE;
 }
 

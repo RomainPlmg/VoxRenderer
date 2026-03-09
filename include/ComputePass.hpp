@@ -5,6 +5,7 @@
 class ComputePass {
 public:
     explicit ComputePass(VkContext &ctx) : m_ctx(ctx) {}
+    ~ComputePass();
 
     bool init(const std::string &shaderPath, const std::vector<VkDescriptorSetLayoutBinding> &bindings);
     void bindImage(uint32_t binding, VkImageView view, VkImageLayout layout);

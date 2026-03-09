@@ -2,6 +2,8 @@
 
 #include "Utils.hpp"
 
+ComputePass::~ComputePass() { shutdown(); }
+
 bool ComputePass::init(const std::string &shaderPath, const std::vector<VkDescriptorSetLayoutBinding> &bindings) {
     VkDescriptorSetLayoutCreateInfo layout_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -94,6 +96,8 @@ void ComputePass::dispatch(VkCommandBuffer cmd, uint32_t x, uint32_t y) {
 }
 
 void ComputePass::shutdown() {
+    vkDeviceWaitIdle(m_ctx.device());
+
     vkDestroyPipeline(m_ctx.device(), m_pipeline, nullptr);
     vkDestroyPipelineLayout(m_ctx.device(), m_pipelineLayout, nullptr);
     vkDestroyDescriptorPool(m_ctx.device(), m_descriptorPool, nullptr); // Descriptor set is destroyed with the pool
