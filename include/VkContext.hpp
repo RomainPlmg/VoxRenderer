@@ -9,7 +9,7 @@ constexpr uint32_t FRAMES_IN_FLIGHT = 3;
 
 #define VK_CHECK(x)                                                                                                    \
     do {                                                                                                               \
-        VkResult r = (x);                                                                                              \
+        [[maybe_unused]] VkResult r = (x);                                                                             \
         assert(r == VK_SUCCESS && #x);                                                                                 \
     } while (0)
 
