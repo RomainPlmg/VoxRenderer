@@ -10,6 +10,7 @@ public:
     void render(VkCommandBuffer cmd);
     void shutdown();
 
+    VkImage storageImage() const { return m_storageImage; }
     VkImageView storageImageView() const { return m_storageImageView; }
     uint32_t width() const { return m_width; }
     uint32_t height() const { return m_height; }

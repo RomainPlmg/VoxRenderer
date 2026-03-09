@@ -39,7 +39,7 @@ Application::Application(const ApplicationSpecification &specification) : m_spec
     if (!m_vkContext->init(m_window->getHandle())) {
         throw std::runtime_error("Failed to init Vulkan backend graphics API.");
     }
-    
+
     // Init renderer
     if (!m_renderer->init(m_specification.window_spec.width, m_specification.window_spec.height)) {
         throw std::runtime_error("Failed to init renderer.");
@@ -92,6 +92,8 @@ void Application::run() {
         for (const auto &layer: m_layerStack) {
             layer->onRender(cmd, *m_renderer);
         }
+
+        m_renderer->render(cmd);
 
         m_vkContext->endFrame(cmd);
     }
