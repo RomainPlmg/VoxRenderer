@@ -81,6 +81,19 @@ void Application::run() {
         const float timestep = glm::clamp(current_time - last_time, 0.001f, 0.1f);
         last_time = current_time;
 
+        m_frameCount++;
+        m_accuTime += timestep;
+
+        // Print FPS in window title bar
+        if (m_accuTime > 0.5f) {
+            float fps = static_cast<float>(m_frameCount) / m_accuTime;
+            std::string title = m_window->spec().title + " | " + std::to_string(static_cast<int>(fps)) + " FPS";
+            glfwSetWindowTitle(m_window->getHandle(), title.c_str());
+
+            m_accuTime = 0.0f;
+            m_frameCount = 0;
+        }
+
         // Main layer update here
         for (const auto &layer: m_layerStack) {
             layer->onUpdate(timestep);

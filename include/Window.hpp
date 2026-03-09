@@ -23,6 +23,7 @@ public:
     void init();
     void destroy();
 
+    [[nodiscard]] const WindowSpecification &spec() const { return m_specification; }
     [[nodiscard]] bool shouldClose() const;
     [[nodiscard]] glm::vec2 getFrameBufferSize() const;
     [[nodiscard]] GLFWwindow *getHandle() const { return m_handle; }

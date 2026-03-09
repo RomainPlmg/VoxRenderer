@@ -52,5 +52,8 @@ private:
     std::unique_ptr<Renderer> m_renderer;
     std::vector<std::unique_ptr<Layer>> m_layerStack;
 
+    float m_accuTime = 0.0f;
+    uint32_t m_frameCount = 0;
+
     bool m_running = true;
 };
