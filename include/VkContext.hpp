@@ -1,10 +1,12 @@
 #pragma once
 
-#include "VkCommon.hpp"
-#include <vk_mem_alloc.h>
 #include <functional>
+#include <vector>
+#include <vk_mem_alloc.h>
+#include "VkCommon.hpp"
 
 constexpr uint32_t FRAMES_IN_FLIGHT = 3;
+
 #define VK_CHECK(x)                                                                                                    \
     do {                                                                                                               \
         VkResult r = (x);                                                                                              \

@@ -1,11 +1,35 @@
 #include "VkContext.hpp"
 #include "Logger.hpp"
 
+// Callback for validation layers
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* pUserData) 
+{
+    // On choisit le niveau de log en fonction de la sévérité Vulkan
+    if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+        LOG_ERROR("Vulkan Validation: {}", pCallbackData->pMessage);
+    } else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+        LOG_WARN("Vulkan Validation: {}", pCallbackData->pMessage);
+    } else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+        LOG_INFO("Vulkan Validation: {}", pCallbackData->pMessage);
+    }
+
+    // On retourne toujours VK_FALSE (VK_TRUE forcerait l'appel à échouer)
+    return VK_FALSE;
+}
+
 bool VkContext::init(GLFWwindow *handle) {
     vkb::InstanceBuilder builder;
 
     // --- Instance
-    auto inst_ret = builder.set_app_name("SVO Demo").request_validation_layers().use_default_debug_messenger().build();
+    auto inst_ret = builder.set_app_name("SVO Demo")
+                            .require_api_version(1, 3, 0)
+                            .request_validation_layers()
+                            .set_debug_callback(debugCallback)
+                            .build();
     if (!inst_ret) {
         LOG_ERROR("Instance: {}.", inst_ret.error().message());
         return false;
