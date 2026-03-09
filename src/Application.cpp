@@ -106,4 +106,4 @@ Application &Application::get() {
     return *s_application;
 }
 
-float Application::getTime() { return glfwGetTime(); }
+float Application::getTime() { return static_cast<float>(glfwGetTime()); }

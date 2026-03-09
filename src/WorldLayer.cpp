@@ -22,9 +22,9 @@ void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
 
 void WorldLayer::onDetach() { m_svoPass->shutdown(); }
 
-void WorldLayer::onEvent(Event &event) {}
+void WorldLayer::onEvent([[maybe_unused]] Event &event) {}
 
-void WorldLayer::onUpdate(float ts) {}
+void WorldLayer::onUpdate([[maybe_unused]] float ts) {}
 
 void WorldLayer::onRender(VkCommandBuffer cmd, Renderer &renderer) {
     m_svoPass->dispatch(cmd, (renderer.width() + 7) / 8, (renderer.height() + 7) / 8);

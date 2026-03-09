@@ -7,13 +7,11 @@ class Renderer;
 
 class Layer {
 public:
-    virtual ~Layer() {
-        onDetach();
-    };
+    virtual ~Layer() { onDetach(); };
 
-    virtual void onAttach(VkContext& ctx, Renderer& renderer) {}
+    virtual void onAttach([[maybe_unused]] VkContext &ctx, [[maybe_unused]] Renderer &renderer) {}
     virtual void onDetach() {}
-    virtual void onEvent(Event &event) {}
-    virtual void onUpdate(float ts) {}
-    virtual void onRender(VkCommandBuffer cmd, Renderer& renderer) {}
+    virtual void onEvent([[maybe_unused]] Event &event) {}
+    virtual void onUpdate([[maybe_unused]] float ts) {}
+    virtual void onRender([[maybe_unused]] VkCommandBuffer cmd, [[maybe_unused]] Renderer &renderer) {}
 };

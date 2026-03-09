@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.25)
 project(svo_demo)
 
 # ============================================================================
@@ -32,36 +32,35 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/gabime/spdlog.git
         GIT_TAG v1.17.0
         GIT_SHALLOW TRUE
+        SYSTEM
 )
 FetchContent_Declare(
         glfw
         GIT_REPOSITORY https://github.com/glfw/glfw.git
         GIT_TAG 3.4
         GIT_SHALLOW TRUE
+        SYSTEM
 )
 FetchContent_Declare(
         glm
         GIT_REPOSITORY https://github.com/g-truc/glm.git
         GIT_TAG 1.0.3
         GIT_SHALLOW TRUE
+        SYSTEM
 )
 FetchContent_Declare(
         vk_bootstrap
         GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap.git
         GIT_TAG v1.4.344
         GIT_SHALLOW TRUE
+        SYSTEM
 )
 FetchContent_Declare(
         VulkanMemoryAllocator
         GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
         GIT_TAG v3.3.0
         GIT_SHALLOW TRUE
-)
-FetchContent_Declare(
-        volk
-        GIT_REPOSITORY https://github.com/zeux/volk.git
-        GIT_TAG vulkan-sdk-1.4.341.0
-        GIT_SHALLOW TRUE
+        SYSTEM
 )
 
 FetchContent_MakeAvailable(spdlog)
@@ -69,7 +68,6 @@ FetchContent_MakeAvailable(glfw)
 FetchContent_MakeAvailable(glm)
 FetchContent_MakeAvailable(vk_bootstrap)
 FetchContent_MakeAvailable(VulkanMemoryAllocator)
-FetchContent_MakeAvailable(volk)
 
 target_link_libraries(svo_demo PRIVATE
         spdlog::spdlog
@@ -79,3 +77,12 @@ target_link_libraries(svo_demo PRIVATE
         GPUOpen::VulkanMemoryAllocator
         Vulkan::Vulkan
 )
+
+# ============================================================================
+# Compiler options
+# ============================================================================
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /permissive- /WX)
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Werror)
+endif()
