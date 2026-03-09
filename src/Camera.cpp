@@ -1,12 +1,13 @@
 #include "Camera.hpp"
 
+#include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
 #include "Application.hpp"
 #include "GLFW/glfw3.h"
 #include "Input.hpp"
 
-Camera::Camera(CameraSettings &settings) : m_settings(settings) { m_lastMousePos = Input::getMousePosition(); }
+Camera::Camera(const CameraSettings &settings) : m_settings(settings) { m_lastMousePos = Input::getMousePosition(); }
 
 void Camera::update(float ts) {
     if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE)) {

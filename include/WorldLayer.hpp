@@ -1,12 +1,19 @@
 #pragma once
 
 #include <memory>
+
+#include "Camera.hpp"
+#include "CameraResources.hpp"
 #include "ComputePass.hpp"
 #include "Layer.hpp"
 
+struct WorldLayerInfo {
+    VkDeviceAddress cameraAddress = 0;
+};
+
 class WorldLayer : public Layer {
 public:
-    void onAttach(VkContext& ctx, Renderer &renderer) override;
+    void onAttach(VkContext &ctx, Renderer &renderer) override;
     void onDetach() override;
     void onEvent(Event &event) override;
     void onUpdate(float ts) override;
@@ -14,4 +21,7 @@ public:
 
 private:
     std::unique_ptr<ComputePass> m_svoPass;
+    std::unique_ptr<Camera> m_camera;
+    std::unique_ptr<CameraResources> m_cameraResources;
+    WorldLayerInfo m_info;
 };

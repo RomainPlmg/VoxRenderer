@@ -76,6 +76,7 @@ bool VkContext::init(GLFWwindow *handle) {
     m_device = dev_ret.value();
 
     VmaAllocatorCreateInfo vma_info{
+            .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
             .physicalDevice = m_device.physical_device.physical_device,
             .device = m_device.device,
             .instance = m_instance.instance,
@@ -92,7 +93,7 @@ bool VkContext::init(GLFWwindow *handle) {
     int width, height;
     glfwGetFramebufferSize(handle, &width, &height);
     auto sc_ret = vkb::SwapchainBuilder{m_device}
-                          .set_desired_present_mode(VK_PRESENT_MODE_IMMEDIATE_KHR)
+                          .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
                           .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT) // Blit from compute shader
                           .set_desired_extent(width, height)
                           .build();

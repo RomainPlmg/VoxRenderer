@@ -12,10 +12,18 @@ bool ComputePass::init(const std::string &shaderPath, const std::vector<VkDescri
     };
     VK_CHECK(vkCreateDescriptorSetLayout(m_ctx.device(), &layout_info, nullptr, &m_descriptorSetLayout));
 
+    VkPushConstantRange pushConstantRange{
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+            .offset = 0,
+            .size = 128,
+    };
+
     VkPipelineLayoutCreateInfo pipeline_layout_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
             .setLayoutCount = 1,
             .pSetLayouts = &m_descriptorSetLayout,
+            .pushConstantRangeCount = 1,
+            .pPushConstantRanges = &pushConstantRange,
     };
     VK_CHECK(vkCreatePipelineLayout(m_ctx.device(), &pipeline_layout_info, nullptr, &m_pipelineLayout));
 

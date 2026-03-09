@@ -30,6 +30,7 @@ Application::Application(const ApplicationSpecification &specification) : m_spec
 
     m_window = std::make_unique<Window>(m_specification.window_spec);
     m_vkContext = std::make_unique<VkContext>();
+
     m_renderer = std::make_unique<Renderer>(*m_vkContext);
 
     // Init window
@@ -49,6 +50,9 @@ Application::Application(const ApplicationSpecification &specification) : m_spec
 }
 
 Application::~Application() {
+    for (auto &layer: m_layerStack) {
+        layer->onDetach();
+    }
     m_layerStack.clear();
     m_renderer->shutdown();
     m_vkContext->shutdown();

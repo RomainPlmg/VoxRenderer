@@ -16,16 +16,30 @@ void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
     });
 
     m_svoPass = std::make_unique<ComputePass>(ctx);
+    m_camera = std::make_unique<Camera>(CameraSettings());
+    m_cameraResources = std::make_unique<CameraResources>();
+
+    m_cameraResources->init(ctx.device(), ctx.allocator());
+
+    m_info.cameraAddress = m_cameraResources->address;
+
     m_svoPass->init(ASSETS_DIR "shaders/svo_trace.comp.spv", bindings);
     m_svoPass->bindImage(0, renderer.storageImageView(), VK_IMAGE_LAYOUT_GENERAL);
 }
 
-void WorldLayer::onDetach() { m_svoPass->shutdown(); }
+void WorldLayer::onDetach() {
+    m_cameraResources->destroy();
+    m_svoPass->shutdown();
+}
 
 void WorldLayer::onEvent([[maybe_unused]] Event &event) {}
 
-void WorldLayer::onUpdate([[maybe_unused]] float ts) {}
+void WorldLayer::onUpdate([[maybe_unused]] float ts) {
+    m_camera->update(ts);
+    m_cameraResources->update(*m_camera);
+}
 
 void WorldLayer::onRender(VkCommandBuffer cmd, Renderer &renderer) {
+    m_svoPass->pushConstants<WorldLayerInfo>(cmd, m_info);
     m_svoPass->dispatch(cmd, (renderer.width() + 7) / 8, (renderer.height() + 7) / 8);
 }
