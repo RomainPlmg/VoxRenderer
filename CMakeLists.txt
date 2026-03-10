@@ -82,8 +82,15 @@ target_link_libraries(svo_demo PRIVATE
 # Compiler options
 # ============================================================================
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
-target_compile_options(${PROJECT_NAME} PRIVATE
-        -Wall
-        -Wextra
-        -Wno-missing-field-initializers # Due tu Vulkan structs, too severe
-)
+
+if(MSVC)
+        target_compile_options(${PROJECT_NAME} PRIVATE
+                "/W4"
+        )
+else()
+        target_compile_options(${PROJECT_NAME} PRIVATE
+                -Wall
+                -Wextra
+                -Wno-missing-field-initializers # Due tu Vulkan structs, too severe
+        )
+endif()
