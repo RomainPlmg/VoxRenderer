@@ -5,6 +5,10 @@
 #include "Renderer.hpp"
 #include "VkContext.hpp"
 
+WorldLayer::WorldLayer(const std::filesystem::path &voxFile) {
+    m_parser.parse(voxFile, m_scene);
+}
+
 void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
     std::vector<VkDescriptorSetLayoutBinding> bindings;
 
