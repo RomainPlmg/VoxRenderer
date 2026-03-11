@@ -3,3 +3,5 @@ cmake-build-*
 .cache/
 *.spv
 assets/scenes/
+.idea/
+.vscode/

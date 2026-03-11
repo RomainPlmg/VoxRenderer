@@ -7,9 +7,35 @@
 #include "GLFW/glfw3.h"
 #include "Input.hpp"
 
+constexpr float VELOCITY = 15.0f;
+
 Camera::Camera(const CameraSettings &settings) : m_settings(settings) { m_lastMousePos = Input::getMousePosition(); }
 
 void Camera::update(float ts) {
+    // TODO: Move camera controller elsewhere
+    glm::vec3 frontXZ = glm::normalize(glm::vec3(m_front.x, 0.0f, m_front.z));
+    glm::vec3 rightXZ = glm::normalize(glm::vec3(m_right.x, 0.0f, m_right.z));
+
+    auto worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+    glm::vec3 dir{0.0f};
+    if (Input::isKeyPressed(GLFW_KEY_D))
+        dir += rightXZ;
+    if (Input::isKeyPressed(GLFW_KEY_A))
+        dir -= rightXZ;
+    if (Input::isKeyPressed(GLFW_KEY_W))
+        dir += frontXZ;
+    if (Input::isKeyPressed(GLFW_KEY_S))
+        dir -= frontXZ;
+    if (Input::isKeyPressed(GLFW_KEY_SPACE))
+        dir -= worldUp;
+    if (Input::isKeyPressed(GLFW_KEY_LEFT_SHIFT))
+        dir += worldUp;
+
+    auto camPos = m_settings.position;
+    camPos += dir * VELOCITY * ts;
+    setPosition(camPos);
+
     if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE)) {
         Input::setCursorMode(Input::CursorMode::Disabled);
         glm::vec2 mousePos = Input::getMousePosition();

@@ -31,8 +31,8 @@ void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
     m_sceneResources->init(ctx.device(), ctx.allocator(), m_scene);
 
     m_info.cameraAddress = m_cameraResources->address;
-    m_info.voxelGridAddress = reinterpret_cast<VkDeviceAddress>(m_scene.models.back().voxels.data());
-    m_info.paletteAddress = reinterpret_cast<VkDeviceAddress>(m_scene.palette.data());
+    m_info.voxelGridAddress = m_sceneResources->address[0];
+    m_info.paletteAddress = m_sceneResources->address[1];
 
     m_svoPass->init(ASSETS_DIR "shaders/svo_trace.comp.spv", bindings);
     m_svoPass->bindImage(0, renderer.storageImageView(), VK_IMAGE_LAYOUT_GENERAL);

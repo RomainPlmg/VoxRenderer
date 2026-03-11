@@ -5,8 +5,7 @@
 #include "VoxParser.hpp"
 
 struct GpuModelHeader {
-    glm::u32vec3 size = glm::uvec3(0);
-    uint32_t _padding;
+    glm::uvec4 size = glm::uvec4(0);
 };
 
 struct VoxSceneResources {

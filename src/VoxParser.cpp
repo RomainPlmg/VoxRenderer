@@ -77,7 +77,10 @@ void VoxParser::readXYZI(std::ifstream &file, uint32_t size, uint32_t nbChilren,
     for (uint32_t i = 0; i < nbVoxels; i++) {
         auto &voxel = scene.models.back().voxels.emplace_back(Voxel());
 
-        file.read(reinterpret_cast<char *>(&voxel.coord), 3);
+        // MagicaVoxel uses inversed z axis the vertical axis
+        file.read(reinterpret_cast<char *>(&voxel.coord.x), 1);
+        file.read(reinterpret_cast<char *>(&voxel.coord.z), 1);
+        file.read(reinterpret_cast<char *>(&voxel.coord.y), 1);
         file.read(reinterpret_cast<char *>(&voxel.colorIndex), 1);
 
         // LOG_TRACE("Create voxel at {}|{}|{} -> color idx: {}", voxel.coord.x, voxel.coord.y, voxel.coord.z,

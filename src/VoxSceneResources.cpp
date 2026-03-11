@@ -1,4 +1,5 @@
 #include "VoxSceneResources.hpp"
+#include <cstdint>
 #include "VkContext.hpp"
 
 void VoxSceneResources::init(VkDevice device, VmaAllocator allocator, const VoxScene &scene) {
@@ -8,7 +9,7 @@ void VoxSceneResources::init(VkDevice device, VmaAllocator allocator, const VoxS
 
     VkBufferCreateInfo voxelBufferInfo{
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = model.size.x * model.size.y * model.size.z + sizeof(GpuModelHeader),
+            .size = model.size.x * model.size.y * model.size.z * sizeof(uint32_t) + sizeof(GpuModelHeader),
             .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
     };
 
@@ -41,17 +42,17 @@ void VoxSceneResources::init(VkDevice device, VmaAllocator allocator, const VoxS
     address[0] = vkGetBufferDeviceAddress(device, &voxelAddrInfo);
     address[1] = vkGetBufferDeviceAddress(device, &paletteAddrInfo);
 
-    std::vector<uint8_t> voxelGrid(model.size.x * model.size.y * model.size.z, 0);
+    std::vector<uint32_t> voxelGrid(model.size.x * model.size.y * model.size.z, 0);
     for (const auto &voxel: model.voxels) {
-        voxelGrid[voxel.coord.x + voxel.coord.y * model.size.x + voxel.coord.z * model.size.x * model.size.y] =
-                voxel.colorIndex;
+        voxelGrid[voxel.coord.x + (model.size.z - 1 - voxel.coord.y) * model.size.x +
+                  voxel.coord.z * model.size.x * model.size.y] = voxel.colorIndex;
     }
 
     // Fill the voxel grid
     auto *mapped0 = static_cast<uint8_t *>(allocInfo[0].pMappedData);
-    GpuModelHeader header{.size = model.size};
+    GpuModelHeader header{.size = glm::uvec4(model.size, 0)};
     memcpy(mapped0, &header, sizeof(GpuModelHeader));
-    memcpy(mapped0 + sizeof(GpuModelHeader), voxelGrid.data(), voxelGrid.size());
+    memcpy(mapped0 + sizeof(GpuModelHeader), voxelGrid.data(), voxelGrid.size() * sizeof(uint32_t));
 
     // Fill the color palette array
     auto *mapped1 = static_cast<glm::u8vec4 *>(allocInfo[1].pMappedData);

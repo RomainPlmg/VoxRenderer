@@ -10,12 +10,7 @@ layout(buffer_reference, std430) readonly buffer CameraData {
 };
 
 layout(buffer_reference, std430) readonly buffer VoxelGridData {
-    uvec3 size;
-    uint _padding;
-    // data[7:0] -> coord.x
-    // data[15:8] -> coord.y
-    // data[23:16] -> coord.z
-    // data[31:24] -> color idx
+    uvec4 size;
     uint data[];
 };
 
@@ -68,7 +63,23 @@ vec2 intersectAABB(Ray ray, vec3 aabbMin, vec3 aabbMax) {
     return vec2(tEnter, tExit);
 }
 
+vec4 unpackRGBA(uint packedColor) {
+    return vec4(
+        float( packedColor        & 0xFFu) / 255.0, // Red
+        float((packedColor >> 8)  & 0xFFu) / 255.0, // Green
+        float((packedColor >> 16) & 0xFFu) / 255.0, // Blue
+        float((packedColor >> 24) & 0xFFu) / 255.0  // Alpha
+    );
+}
+
+// ===========================
+// Constants
+// ===========================
+const float EPSILON = 0.0001;
+
+// ===========================
 // Main
+// ===========================
 void main() {
     ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
     ivec2 size = imageSize(outputImage);
@@ -81,7 +92,7 @@ void main() {
 
     // Initialize the ray
     Ray ray;
-    ray.origin = pc.camera.position;
+    ray.origin = pc.camera.position.xyz;
     ray.dir = vec3(pc.camera.invView * vec4(normalize(vec3(target) / target.w), 0.0));
 
     // ---------------------------
@@ -90,19 +101,19 @@ void main() {
     vec3 color = vec3(0.0);
 
     // Check if the ray intersect the model
-    vec2 hit = intersectAABB(ray, vec3(0.0), vec3(pc.voxelGrid.size));
+    vec2 hit = intersectAABB(ray, vec3(0.0), pc.voxelGrid.size.xyz);
     if (hit.x > hit.y || hit.y < 0.0) { // No intersection
         imageStore(outputImage, pixelCoords, vec4(color, 1.0));
         return;
     }
 
     // Bring the ray origin to the model boundary
-    ray.origin = ray.origin + ray.dir * max(hit.x, 0.0);
+    ray.origin = ray.origin + ray.dir * max(hit.x - EPSILON, 0.0);
 
     // Initial DDA state
     DDAState state;
     state.gridPos = floor(ray.origin);
-    state.tDist = abs(1.0/(ray.dir + 0.000001));
+    state.tDist = abs(1.0/(ray.dir + EPSILON));
     state.stepDir = sign(ray.dir);
     vec3 nextBoundary = state.gridPos + max(state.stepDir, vec3(0.0));
     state.tMax = abs((nextBoundary - ray.origin) / ray.dir);
@@ -117,9 +128,23 @@ void main() {
         state.tMax += stepMask * state.tDist;
         state.gridPos += vec3(stepMask) * state.stepDir;
 
-        // uint voxelIdx = state.gridPos.x + state.gridPos.y * 
+        // Check if position is in the model volume
+        if (any(lessThan(state.gridPos, vec3(-EPSILON))) || 
+            any(greaterThanEqual(state.gridPos, pc.voxelGrid.size.xyz))) {
+            continue;
+        }
+
+        uint voxelIdx = uint(state.gridPos.x) +
+                        uint(state.gridPos.y) * pc.voxelGrid.size.x +
+                        uint(state.gridPos.z) * pc.voxelGrid.size.x * pc.voxelGrid.size.y;
+        uint colorIdx = pc.voxelGrid.data[voxelIdx];
+
+        if (colorIdx != 0) {
+            vec4 voxelColor = unpackRGBA(pc.palette.data[colorIdx]);
+            imageStore(outputImage, pixelCoords, voxelColor);
+            return;
+        }
     }
 
-    color = ray.dir * 0.5 + 0.5;
     imageStore(outputImage, pixelCoords, vec4(color, 1.0));
 }
