@@ -6,31 +6,120 @@ layout(local_size_x = 8, local_size_y = 8) in;  // workgroup 8x8
 layout(buffer_reference, std430) readonly buffer CameraData {
     mat4 invView;
     mat4 invProj;
+    vec4 position;
+};
+
+layout(buffer_reference, std430) readonly buffer VoxelGridData {
+    uvec3 size;
+    uint _padding;
+    // data[7:0] -> coord.x
+    // data[15:8] -> coord.y
+    // data[23:16] -> coord.z
+    // data[31:24] -> color idx
+    uint data[];
+};
+
+layout(buffer_reference, std430) readonly buffer PaletteData {
+    // data[7:0] -> red
+    // data[15:8] -> green
+    // data[23:16] -> blue
+    // data[31:24] -> alpha
+    uint data[];
 };
 
 layout(push_constant) uniform PushConstants {
     CameraData camera;
+    VoxelGridData voxelGrid;
+    PaletteData palette;
 } pc;
 
 // Bindings
 layout(rgba8, binding = 0) uniform writeonly image2D outputImage;
 
+// ===========================
+// Structures
+// ===========================
+
+struct Ray {
+    vec3 origin;
+    vec3 dir;
+};
+
+struct DDAState {
+    vec3 gridPos;  // Current voxel position in the grid
+    vec3 stepDir;  // -1 or 1 for each axis
+    vec3 tMax;     // Distance along the ray until next boundary for each axis
+    vec3 tDist;    // Distance along the ray between two boundaries for each axis
+};
+
+// ===========================
+// Utility functions
+// ===========================
+vec2 intersectAABB(Ray ray, vec3 aabbMin, vec3 aabbMax) {
+    vec3 t0 = (aabbMin - ray.origin) / ray.dir;
+    vec3 t1 = (aabbMax - ray.origin) / ray.dir;
+    // If negative direction, t0 > t1
+    vec3 tMin = min(t0, t1);
+    vec3 tMax = max(t0, t1);
+    // In the box if we are in all 3 axis
+    float tEnter = max(tMin.x, max(tMin.y, tMin.z));
+    float tExit = min(tMax.x, min(tMax.y, tMax.z));
+
+    return vec2(tEnter, tExit);
+}
+
 // Main
 void main() {
-    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
     ivec2 size = imageSize(outputImage);
 
-    if (pixel.x >= size.x || pixel.y >= size.y) return;
+    // If pixel out of the screen
+    if (pixelCoords.x >= size.x || pixelCoords.y >= size.y) return;
 
-    // UV en [-1, 1]
-    vec2 uv = (vec2(pixel) / vec2(size)) * 2.0 - 1.0;
+    vec2 uv = (vec2(pixelCoords) / vec2(size)) * 2.0 - 1.0;
+    vec4 target = pc.camera.invProj * vec4(uv, 1.0, 1.0);
 
-    vec4 rayClip = vec4(uv, -1.0, 1.0);
-    vec4 rayView = pc.camera.invProj * rayClip;
-    rayView = vec4(rayView.xy, -1.0, 0.0);
-    vec3 rayDir = normalize((pc.camera.invView * rayView).xyz);
+    // Initialize the ray
+    Ray ray;
+    ray.origin = pc.camera.position;
+    ray.dir = vec3(pc.camera.invView * vec4(normalize(vec3(target) / target.w), 0.0));
 
-    vec3 color = rayDir * 0.5 + 0.5;
+    // ---------------------------
+    // Start the DDA algorithm
+    // ---------------------------
+    vec3 color = vec3(0.0);
 
-    imageStore(outputImage, pixel, vec4(color, 1.0));
+    // Check if the ray intersect the model
+    vec2 hit = intersectAABB(ray, vec3(0.0), vec3(pc.voxelGrid.size));
+    if (hit.x > hit.y || hit.y < 0.0) { // No intersection
+        imageStore(outputImage, pixelCoords, vec4(color, 1.0));
+        return;
+    }
+
+    // Bring the ray origin to the model boundary
+    ray.origin = ray.origin + ray.dir * max(hit.x, 0.0);
+
+    // Initial DDA state
+    DDAState state;
+    state.gridPos = floor(ray.origin);
+    state.tDist = abs(1.0/(ray.dir + 0.000001));
+    state.stepDir = sign(ray.dir);
+    vec3 nextBoundary = state.gridPos + max(state.stepDir, vec3(0.0));
+    state.tMax = abs((nextBoundary - ray.origin) / ray.dir);
+
+    for (uint i = 0; i < 256; i++) {
+        vec3 stepMask = vec3(
+            float(state.tMax.x <= min(state.tMax.y, state.tMax.z)),
+            float(state.tMax.y < min(state.tMax.x, state.tMax.z)),
+            float(state.tMax.z < min(state.tMax.x, state.tMax.y))
+        );
+
+        state.tMax += stepMask * state.tDist;
+        state.gridPos += vec3(stepMask) * state.stepDir;
+
+        // uint voxelIdx = state.gridPos.x + state.gridPos.y * 
+    }
+
+    color = ray.dir * 0.5 + 0.5;
+    imageStore(outputImage, pixelCoords, vec4(color, 1.0));
 }

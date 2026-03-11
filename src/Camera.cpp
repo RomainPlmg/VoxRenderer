@@ -15,7 +15,7 @@ void Camera::update(float ts) {
         glm::vec2 mousePos = Input::getMousePosition();
         glm::vec2 mouseOffset = (m_lastMousePos - mousePos) * m_settings.sensitivity * ts;
         m_yaw -= mouseOffset.x;
-        m_pitch += mouseOffset.y;
+        m_pitch -= mouseOffset.y;
 
         // Make sure that when pitch is out of bounds, screen doesn't get
         // flipped

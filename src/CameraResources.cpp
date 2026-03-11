@@ -28,6 +28,7 @@ void CameraResources::update(const Camera &camera) {
     auto *mapped = static_cast<CameraUniforms *>(allocInfo.pMappedData);
     mapped->invView = camera.invView();
     mapped->invProj = camera.invProj();
+    mapped->position = glm::vec4(camera.getSettings().position, 1.0f);
 }
 
 void CameraResources::destroy() { vmaDestroyBuffer(m_allocator, buffer, allocation); }

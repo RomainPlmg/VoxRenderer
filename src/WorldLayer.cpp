@@ -5,9 +5,7 @@
 #include "Renderer.hpp"
 #include "VkContext.hpp"
 
-WorldLayer::WorldLayer(const std::filesystem::path &voxFile) {
-    m_parser.parse(voxFile, m_scene);
-}
+WorldLayer::WorldLayer(const std::filesystem::path &voxFile) { m_parser.parse(voxFile, m_scene); }
 
 void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
     std::vector<VkDescriptorSetLayoutBinding> bindings;
@@ -19,13 +17,22 @@ void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
             .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
     });
 
+    CameraSettings camSettings{
+            .position = glm::vec3(0.0f, 0.0f, -50.0f),
+            .sensitivity = 5.0f,
+    };
+
     m_svoPass = std::make_unique<ComputePass>(ctx);
-    m_camera = std::make_unique<Camera>(CameraSettings());
+    m_camera = std::make_unique<Camera>(camSettings);
     m_cameraResources = std::make_unique<CameraResources>();
+    m_sceneResources = std::make_unique<VoxSceneResources>();
 
     m_cameraResources->init(ctx.device(), ctx.allocator());
+    m_sceneResources->init(ctx.device(), ctx.allocator(), m_scene);
 
     m_info.cameraAddress = m_cameraResources->address;
+    m_info.voxelGridAddress = reinterpret_cast<VkDeviceAddress>(m_scene.models.back().voxels.data());
+    m_info.paletteAddress = reinterpret_cast<VkDeviceAddress>(m_scene.palette.data());
 
     m_svoPass->init(ASSETS_DIR "shaders/svo_trace.comp.spv", bindings);
     m_svoPass->bindImage(0, renderer.storageImageView(), VK_IMAGE_LAYOUT_GENERAL);
@@ -33,6 +40,7 @@ void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
 
 void WorldLayer::onDetach() {
     m_cameraResources->destroy();
+    m_sceneResources->destroy();
     m_svoPass->shutdown();
 }
 
