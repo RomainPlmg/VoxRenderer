@@ -15,14 +15,11 @@ void VoxParser::parse(const std::filesystem::path &path, VoxScene &scene) {
     LOG_INFO("File version: {}.", scene.version);
 
     // Read MAIN chunk
-    char chunkId[4];
-    uint32_t chunkContentLength = 0;
-    uint32_t nbChildrenChunks = 0;
-    file.read(chunkId, 4);
-    file.read(reinterpret_cast<char *>(&chunkContentLength), 4);
-    file.read(reinterpret_cast<char *>(&nbChildrenChunks), 4);
+    uint32_t chunkId = readUint32(file);
+    jump(file, 4);
+    uint32_t nbChildrenChunks = readUint32(file);
 
-    LOG_DEBUG("Read chunk \'{}\'.", std::string_view(chunkId, 4));
+    LOG_DEBUG("Read chunk \'{}\'.", uint32ToStr(chunkId));
 
     auto endPos = file.tellg() + static_cast<std::streamoff>(nbChildrenChunks);
     while (file.tellg() < endPos) {
@@ -30,29 +27,102 @@ void VoxParser::parse(const std::filesystem::path &path, VoxScene &scene) {
     }
 }
 
+/////////////////////////////////////////////
+// Utility functions
+/////////////////////////////////////////////
+
+void VoxParser::jump(std::ifstream &file, uint32_t bytes) { file.seekg(bytes, std::ios::cur); }
+
+uint8_t VoxParser::readUint8(std::ifstream &file) {
+    uint8_t d;
+    file.read(reinterpret_cast<char *>(&d), 1);
+
+    return d;
+}
+
+uint32_t VoxParser::readUint32(std::ifstream &file) {
+    uint32_t d;
+    file.read(reinterpret_cast<char *>(&d), 4);
+
+    return d;
+}
+
+int32_t VoxParser::readInt32(std::ifstream &file) {
+    int32_t d;
+    file.read(reinterpret_cast<char *>(&d), 4);
+
+    return d;
+}
+
+std::string VoxParser::readString(std::ifstream &file) {
+    uint32_t buffSize = readUint32(file);
+    std::string buffer;
+    for (size_t i = 0; i < buffSize; i++) {
+        buffer.push_back(static_cast<char>(readUint8(file)));
+    }
+
+    return buffer;
+}
+
+void VoxParser::readDict(std::ifstream &file, std::unordered_map<std::string, std::string> &dict) {
+    uint32_t dictSize = readUint32(file);
+
+    for (size_t i = 0; i < dictSize; i++) {
+        auto key = readString(file);
+        dict[key] = readString(file);
+    }
+}
+
+std::string VoxParser::uint32ToStr(uint32_t value) {
+    char buffer[5];
+
+    buffer[0] = static_cast<char>(value & 0xFF);
+    buffer[1] = static_cast<char>((value >> 8) & 0xFF);
+    buffer[2] = static_cast<char>((value >> 16) & 0xFF);
+    buffer[3] = static_cast<char>((value >> 24) & 0xFF);
+    buffer[4] = '\0';
+
+    return std::string(buffer);
+}
+
+/////////////////////////////////////////////
+// Parser functions
+/////////////////////////////////////////////
+
 void VoxParser::readHeader(std::ifstream &file, VoxScene &scene) {
-    file.seekg(4, std::ios::cur); // Skip the "VOX " header
-    file.read(reinterpret_cast<char *>(&scene.version), 4);
+    jump(file, 4);
+    scene.version = readUint32(file);
 }
 
 void VoxParser::readChunk(std::ifstream &file, VoxScene &scene) {
-    char chunkId[4];
-    uint32_t chunkContentLength = 0;
-    uint32_t nbChildrenChunks = 0;
-    file.read(chunkId, 4);
-    file.read(reinterpret_cast<char *>(&chunkContentLength), 4);
-    file.read(reinterpret_cast<char *>(&nbChildrenChunks), 4);
+    uint32_t chunkId = readUint32(file);
+    uint32_t chunkContentLength = readUint32(file);
+    uint32_t nbChildrenChunks = readUint32(file);
 
-    LOG_DEBUG("Read chunk \'{}\'.", std::string_view(chunkId, 4));
-    if (std::string_view(chunkId, 4) == "SIZE")
-        readSIZE(file, chunkContentLength, nbChildrenChunks, scene);
-    else if (std::string_view(chunkId, 4) == "XYZI")
-        readXYZI(file, chunkContentLength, nbChildrenChunks, scene);
-    else if (std::string_view(chunkId, 4) == "RGBA")
-        readRGBA(file, chunkContentLength, nbChildrenChunks, scene);
-    else {
-        LOG_WARN("Unknown chunk ID \'{}\', skip...", std::string_view(chunkId, 4));
-        file.seekg(chunkContentLength + nbChildrenChunks, std::ios::cur);
+    LOG_DEBUG("Read chunk \'{}\'.", uint32ToStr(chunkId));
+    switch (chunkId) {
+        case 0x455A4953: // SIZE
+            readSIZE(file, chunkContentLength, nbChildrenChunks, scene);
+            break;
+        case 0x495A5958: // XYZI
+            readXYZI(file, chunkContentLength, nbChildrenChunks, scene);
+            break;
+        case 0x41424752: // RGBA
+            readRGBA(file, chunkContentLength, nbChildrenChunks, scene);
+            break;
+        case 0x4E52546E: // nTRN
+            readTransformNode(file, chunkContentLength, nbChildrenChunks, scene);
+            break;
+        case 0x5052476E: // nGRP
+            readGroupNode(file, chunkContentLength, nbChildrenChunks, scene);
+            break;
+        case 0x5259414C: // LAYR
+            readLayer(file, chunkContentLength, nbChildrenChunks, scene);
+            break;
+        default:
+            LOG_WARN("Unknown chunk ID \'{}\', skip...", uint32ToStr(chunkId));
+            jump(file, chunkContentLength + nbChildrenChunks);
+            break;
     }
 }
 
@@ -60,7 +130,9 @@ void VoxParser::readSIZE(std::ifstream &file, uint32_t size, uint32_t nbChilren,
     auto before = file.tellg();
 
     auto &model = scene.models.emplace_back(VoxModel());
-    file.read(reinterpret_cast<char *>(&model.size), 12);
+    model.size.x = readUint32(file);
+    model.size.y = readUint32(file);
+    model.size.z = readUint32(file);
 
     LOG_INFO("Model of size {}x{}x{}.", model.size.x, model.size.y, model.size.z);
 
@@ -72,16 +144,15 @@ void VoxParser::readSIZE(std::ifstream &file, uint32_t size, uint32_t nbChilren,
 void VoxParser::readXYZI(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
     auto before = file.tellg();
 
-    uint32_t nbVoxels = 0;
-    file.read(reinterpret_cast<char *>(&nbVoxels), 4);
+    uint32_t nbVoxels = readUint32(file);
     for (uint32_t i = 0; i < nbVoxels; i++) {
         auto &voxel = scene.models.back().voxels.emplace_back(Voxel());
 
         // MagicaVoxel uses inversed z axis the vertical axis
-        file.read(reinterpret_cast<char *>(&voxel.coord.x), 1);
-        file.read(reinterpret_cast<char *>(&voxel.coord.z), 1);
-        file.read(reinterpret_cast<char *>(&voxel.coord.y), 1);
-        file.read(reinterpret_cast<char *>(&voxel.colorIndex), 1);
+        voxel.coord.x = readUint8(file);
+        voxel.coord.z = readUint8(file);
+        voxel.coord.y = readUint8(file);
+        voxel.colorIndex = readUint8(file);
 
         // LOG_TRACE("Create voxel at {}|{}|{} -> color idx: {}", voxel.coord.x, voxel.coord.y, voxel.coord.z,
         //           voxel.colorIndex);
@@ -98,13 +169,102 @@ void VoxParser::readRGBA(std::ifstream &file, uint32_t size, uint32_t nbChilren,
 
     scene.palette[0] = glm::u8vec4(0); // palette[0] reserved for empty voxels
     for (uint32_t i = 0; i < 255; i++) {
-        auto &color = scene.palette[i + 1]; // Color [0-254] are mapped to palette index [1-255]
-        file.read(reinterpret_cast<char *>(&color), 4);
+        scene.palette[i + 1].r = readUint8(file);
+        scene.palette[i + 1].g = readUint8(file);
+        scene.palette[i + 1].b = readUint8(file);
+        scene.palette[i + 1].a = readUint8(file);
+
         // LOG_TRACE("Color at palette idx {} -> rgba({}, {}, {}, {})", i + 1, color.r, color.g, color.b, color.a);
     }
-    file.seekg(4, std::ios::cur); // Skip the last color (empty voxel)
+    jump(file, 4);
 
     auto after = file.tellg();
     // Safe check, never reach (normaly)
     assert(after - before == size);
 }
+
+void VoxParser::readTransformNode(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
+    auto before = file.tellg();
+
+    auto &transform = scene.transforms.emplace_back(VoxTransform());
+    transform.nodeId = readUint32(file);
+
+    std::unordered_map<std::string, std::string> nodeAttributesStr;
+    readDict(file, nodeAttributesStr);
+    if (nodeAttributesStr.count("_name"))
+        transform.nodeAttribute.name = nodeAttributesStr["_name"];
+    if (nodeAttributesStr.count("_hidden"))
+        transform.nodeAttribute.hidden = (nodeAttributesStr["_hidden"] == "1");
+
+
+    transform.childId = readUint32(file);
+    transform._reservedId = readInt32(file);
+
+    assert(transform._reservedId == -1);
+
+    transform.layerId = readUint32(file);
+    transform.nbFrames = readUint32(file);
+
+    std::unordered_map<std::string, std::string> frameAttributesStr;
+    readDict(file, frameAttributesStr);
+
+    // TODO: Parse the frameAttributesStr
+
+    auto after = file.tellg();
+    // Safe check, never reach (normaly)
+    assert(after - before == size);
+}
+
+void VoxParser::readGroupNode(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
+    auto before = file.tellg();
+
+    auto &group = scene.groups.emplace_back(VoxGroup());
+    group.nodeId = readUint32(file);
+
+    std::unordered_map<std::string, std::string> nodeAttributesStr;
+    readDict(file, nodeAttributesStr);
+    if (nodeAttributesStr.count("_name"))
+        group.nodeAttribute.name = nodeAttributesStr["_name"];
+    if (nodeAttributesStr.count("_hidden"))
+        group.nodeAttribute.hidden = (nodeAttributesStr["_hidden"] == "1");
+
+    group.nbChildren = readUint32(file);
+
+    for (size_t i = 0; i < group.nbChildren; i++) {
+        group.childrenIdx.push_back(readUint32(file));
+    }
+
+    auto after = file.tellg();
+    // Safe check, never reach (normaly)
+    assert(after - before == size);
+}
+
+void VoxParser::readShapeNode(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {}
+
+void VoxParser::readMaterial(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {}
+
+void VoxParser::readLayer(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
+    auto before = file.tellg();
+
+    auto& layer = scene.layers.emplace_back(VoxLayer());
+    layer.layerId = readUint32(file);
+
+    std::unordered_map<std::string, std::string> layerAttributesStr;
+    readDict(file, layerAttributesStr);
+
+    // TODO: Parse the layerAttributesStr
+
+    layer._reservedId = readUint32(file);
+
+    assert(layer._reservedId == -1);
+
+    auto after = file.tellg();
+    // Safe check, never reach (normaly)
+    assert(after - before == size);
+}
+
+void VoxParser::readRenderObject(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {}
+
+void VoxParser::readPaletteNote(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {}
+
+void VoxParser::readIndexMap(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {}
