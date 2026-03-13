@@ -16,7 +16,7 @@ struct WorldLayerInfo {
     VkDeviceAddress paletteAddress = 0;
 };
 
-class WorldLayer : public Layer {
+class WorldLayer final : public Layer {
 public:
     WorldLayer(const std::filesystem::path &voxFile);
 

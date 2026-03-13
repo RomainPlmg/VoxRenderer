@@ -7,6 +7,8 @@ class Renderer;
 
 class Layer {
 public:
+    virtual ~Layer() {}
+
     virtual void onAttach([[maybe_unused]] VkContext &ctx, [[maybe_unused]] Renderer &renderer) {}
     virtual void onDetach() {}
     virtual void onEvent([[maybe_unused]] Event &event) {}

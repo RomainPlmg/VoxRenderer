@@ -2,8 +2,6 @@
 
 #include "Utils.hpp"
 
-ComputePass::~ComputePass() { shutdown(); }
-
 bool ComputePass::init(const std::string &shaderPath, const std::vector<VkDescriptorSetLayoutBinding> &bindings) {
     VkDescriptorSetLayoutCreateInfo layout_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
