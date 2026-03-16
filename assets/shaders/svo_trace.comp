@@ -118,7 +118,7 @@ void main() {
     vec3 nextBoundary = state.gridPos + max(state.stepDir, vec3(0.0));
     state.tMax = abs((nextBoundary - ray.origin) / ray.dir);
 
-    for (uint i = 0; i < 256; i++) {
+    for (uint i = 0; i < 1000; i++) {
         vec3 stepMask = vec3(
             float(state.tMax.x <= min(state.tMax.y, state.tMax.z)),
             float(state.tMax.y < min(state.tMax.x, state.tMax.z)),

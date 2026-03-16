@@ -132,7 +132,7 @@ void VoxParser::readChunk(std::ifstream &file, VoxScene &scene) {
     }
 }
 
-void VoxParser::readSIZE(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
+void VoxParser::readSIZE(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene) {
     auto before = file.tellg();
 
     auto &model = scene.models.emplace_back(VoxModel());
@@ -143,11 +143,11 @@ void VoxParser::readSIZE(std::ifstream &file, uint32_t size, uint32_t nbChilren,
     LOG_INFO("Model of size {}x{}x{}.", model.size.x, model.size.y, model.size.z);
 
     auto after = file.tellg();
-    // Safe check, never reach (normaly)
+    // Safe check, never reach (normally)
     assert(after - before == size);
 }
 
-void VoxParser::readXYZI(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
+void VoxParser::readXYZI(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene) {
     auto before = file.tellg();
 
     uint32_t nbVoxels = readUint32(file);
@@ -166,11 +166,11 @@ void VoxParser::readXYZI(std::ifstream &file, uint32_t size, uint32_t nbChilren,
     LOG_INFO("Model contains {} voxels", scene.models.back().voxels.size());
 
     auto after = file.tellg();
-    // Safe check, never reach (normaly)
+    // Safe check, never reach (normally)
     assert(after - before == size);
 }
 
-void VoxParser::readRGBA(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
+void VoxParser::readRGBA(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene) {
     auto before = file.tellg();
 
     scene.palette[0] = glm::u8vec4(0); // palette[0] reserved for empty voxels
@@ -185,18 +185,18 @@ void VoxParser::readRGBA(std::ifstream &file, uint32_t size, uint32_t nbChilren,
     jump(file, 4);
 
     auto after = file.tellg();
-    // Safe check, never reach (normaly)
+    // Safe check, never reach (normally)
     assert(after - before == size);
 }
 
-void VoxParser::readTransformNode(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
+void VoxParser::readTransformNode(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene) {
     auto before = file.tellg();
 
     auto nodeId = readUint32(file);
 
     scene.nodes[nodeId] = std::make_unique<VoxTransformNode>();
     auto &ptr = scene.nodes[nodeId];
-    VoxTransformNode &transform = dynamic_cast<VoxTransformNode &>(*ptr);
+    auto &transform = dynamic_cast<VoxTransformNode &>(*ptr);
 
     std::unordered_map<std::string, std::string> nodeAttributesStr;
     readDict(file, nodeAttributesStr);
@@ -209,22 +209,26 @@ void VoxParser::readTransformNode(std::ifstream &file, uint32_t size, uint32_t n
     transform.childId = readUint32(file);
     transform._reservedId = readInt32(file);
 
-    assert(transform._reservedId == -1);
+    if (transform._reservedId != -1) {
+        LOG_ERROR("Transform node \'{}\' must have a reserved id = -1.", nodeId);
+    }
 
     transform.layerId = readUint32(file);
     transform.nbFrames = readUint32(file);
 
-    std::unordered_map<std::string, std::string> frameAttributesStr;
-    readDict(file, frameAttributesStr);
+    for (size_t i = 0; i < transform.nbFrames; i++) {
+        std::unordered_map<std::string, std::string> frameAttributesStr;
+        readDict(file, frameAttributesStr);
 
-    // TODO: Parse the frameAttributesStr
+        transform.frameAttributes.push_back(parseFrameAttribute(frameAttributesStr));
+    }
 
     auto after = file.tellg();
-    // Safe check, never reach (normaly)
+    // Safe check, never reach (normally)
     assert(after - before == size);
 }
 
-void VoxParser::readGroupNode(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
+void VoxParser::readGroupNode(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene) {
     auto before = file.tellg();
 
     auto nodeId = readUint32(file);
@@ -247,11 +251,11 @@ void VoxParser::readGroupNode(std::ifstream &file, uint32_t size, uint32_t nbChi
     }
 
     auto after = file.tellg();
-    // Safe check, never reach (normaly)
+    // Safe check, never reach (normally)
     assert(after - before == size);
 }
 
-void VoxParser::readShapeNode(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
+void VoxParser::readShapeNode(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene) {
     auto before = file.tellg();
 
     auto nodeId = readUint32(file);
@@ -269,22 +273,22 @@ void VoxParser::readShapeNode(std::ifstream &file, uint32_t size, uint32_t nbChi
 
     shape.nbModels = readUint32(file);
     if (shape.nbModels <= 0)
-        LOG_ERROR("Shape node \'{}\' must have at least 1 model.");
+        LOG_ERROR("Shape node \'{}\' must have at least 1 model.", nodeId);
 
     for (size_t i = 0; i < shape.nbModels; i++) {
         shape.modelId.push_back(readUint32(file));
         std::unordered_map<std::string, std::string> modelAttributeStr;
         readDict(file, modelAttributeStr);
 
-        // TODO: Parse the modelAttributesStr
+        shape.modelAttributes.push_back(parseModelAttribute(modelAttributeStr));
     }
 
     auto after = file.tellg();
-    // Safe check, never reach (normaly)
+    // Safe check, never reach (normally)
     assert(after - before == size);
 }
 
-void VoxParser::readMaterial(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
+void VoxParser::readMaterial(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene) {
     auto before = file.tellg();
 
     auto &material = scene.materials.emplace_back(VoxMaterial());
@@ -293,14 +297,14 @@ void VoxParser::readMaterial(std::ifstream &file, uint32_t size, uint32_t nbChil
     std::unordered_map<std::string, std::string> materialPropertyStr;
     readDict(file, materialPropertyStr);
 
-    // TODO : Parse the materialPropertyStr
+    material.property = parseMaterialProperty(materialPropertyStr);
 
     auto after = file.tellg();
-    // Safe check, never reach (normaly)
+    // Safe check, never reach (normally)
     assert(after - before == size);
 }
 
-void VoxParser::readLayer(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
+void VoxParser::readLayer(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene) {
     auto before = file.tellg();
 
     auto &layer = scene.layers.emplace_back(VoxLayer());
@@ -313,15 +317,82 @@ void VoxParser::readLayer(std::ifstream &file, uint32_t size, uint32_t nbChilren
 
     layer._reservedId = readUint32(file);
 
-    assert(layer._reservedId == -1);
+    if (layer._reservedId != -1) {
+        LOG_ERROR("Layer chunk \'{}\' must have a reserved id = -1.", layer.layerId);
+    }
 
     auto after = file.tellg();
-    // Safe check, never reach (normaly)
+    // Safe check, never reach (normally)
     assert(after - before == size);
 }
 
-void VoxParser::readRenderObject(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {}
+void VoxParser::readRenderObject(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene) {}
 
-void VoxParser::readPaletteNote(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {}
+void VoxParser::readPaletteNote(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene) {}
 
-void VoxParser::readIndexMap(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {}
+void VoxParser::readIndexMap(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene) {}
+
+VoxNodeAttribute VoxParser::parseNodeAttribute(std::unordered_map<std::string, std::string> &content) {
+    VoxNodeAttribute attr{};
+
+    if (content.contains("_name"))
+        attr.name = content["_name"];
+    if (content.contains("_hidden"))
+        attr.hidden = (content["_hidden"] == "1");
+
+    return attr;
+}
+
+VoxFrameAttribute VoxParser::parseFrameAttribute(std::unordered_map<std::string, std::string> &content) {
+    VoxFrameAttribute frame{};
+    if (content.contains("_r"))
+        frame.rotation = static_cast<int8_t>(std::stoi(content["_r"]));
+    if (content.contains("_t")) {
+        std::istringstream ss(content["_t"]);
+        ss >> frame.translation.x >> frame.translation.y >> frame.translation.z;
+    }
+    if (content.contains("_f"))
+        frame.frameIdx = std::stoi(content["_f"]);
+
+    return frame;
+}
+
+VoxModelAttribute VoxParser::parseModelAttribute(std::unordered_map<std::string, std::string> &content) {
+    VoxModelAttribute model{};
+
+    if (content.contains("_f"))
+        model.frameIdx = std::stoi(content["_f"]);
+
+    return model;
+}
+
+VoxMaterialProperty VoxParser::parseMaterialProperty(std::unordered_map<std::string, std::string> &content) {
+    VoxMaterialProperty property{};
+
+    if (content.contains("_type")) {
+        if (content["_type"] == "_diffuse")
+            property.type = VoxMatType::Diffuse;
+        if (content["_type"] == "_metal")
+            property.type = VoxMatType::Metal;
+        if (content["_type"] == "_glass")
+            property.type = VoxMatType::Glass;
+        if (content["_type"] == "_emit")
+            property.type = VoxMatType::Emit;
+    }
+    if (content.contains("_weight"))
+        property.weight = std::stof(content["_weight"]);
+    if (content.contains("_rough"))
+        property.rough = std::stof(content["_rough"]);
+    if (content.contains("_spec"))
+        property.spec = std::stof(content["_spec"]);
+    if (content.contains("_ior"))
+        property.ior = std::stof(content["_ior"]);
+    if (content.contains("_att"))
+        property.att = std::stof(content["_att"]);
+    if (content.contains("_flux"))
+        property.flux = std::stof(content["_flux"]);
+
+    property.plastic = content.contains("_plastic");
+
+    return property;
+}

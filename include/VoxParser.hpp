@@ -11,12 +11,12 @@
 // Basic version of the .vox format
 /////////////////////////////////////////////
 struct Voxel {
-    glm::i8vec3 coord = glm::ivec3(0);
+    glm::u8vec3 coord = glm::u8vec3(0);
     uint8_t colorIndex = 0;
 };
 
 struct VoxModel {
-    glm::u32vec3 size = glm::ivec3(0);
+    glm::uvec3 size = glm::uvec3(0);
     std::vector<Voxel> voxels;
 };
 
@@ -36,39 +36,31 @@ struct VoxNode {
 
 struct VoxFrameAttribute {
     std::optional<uint8_t> rotation;
-    std::optional<glm::uvec3> translation;
+    glm::ivec3 translation;
     std::optional<uint32_t> frameIdx;
 };
 
-struct VoxFrameAttributes {
-    std::unordered_map<std::string, VoxFrameAttribute> data;
-};
-
 struct VoxModelAttribute {
-    uint32_t frameIdx;
+    std::optional<uint32_t> frameIdx;
 };
 
-struct VoxModelAttributes {
-    std::unordered_map<std::string, VoxModelAttribute> data;
-};
-
-struct VoxTransformNode : public VoxNode {
+struct VoxTransformNode : VoxNode {
     uint32_t childId;
     int32_t _reservedId;
     uint32_t layerId;
     uint32_t nbFrames;
-    VoxFrameAttributes frameAttributes;
+    std::vector<VoxFrameAttribute> frameAttributes;
 };
 
-struct VoxGroupNode : public VoxNode {
+struct VoxGroupNode : VoxNode {
     uint32_t nbChildren;
     std::vector<uint32_t> childrenIdx;
 };
 
-struct VoxShapeNode : public VoxNode {
+struct VoxShapeNode : VoxNode {
     uint32_t nbModels;
     std::vector<uint32_t> modelId;
-    std::vector<VoxModelAttributes> modelAttributes;
+    std::vector<VoxModelAttribute> modelAttributes;
 };
 
 /////////////////////////////////////////////
@@ -83,22 +75,19 @@ enum class VoxMatType {
 };
 
 struct VoxMaterialProperty {
-    VoxMatType type;
-    float weight;
-    float rough;
-    float spec;
-    float ior;
-    float att;
-    bool plastic;
-};
-
-struct VoxMaterialProperties {
-    std::unordered_map<std::string, VoxMaterialProperty> data;
+    std::optional<VoxMatType> type;
+    std::optional<float> weight;
+    std::optional<float> rough;
+    std::optional<float> spec;
+    std::optional<float> ior;
+    std::optional<float> att;
+    std::optional<float> flux;
+    std::optional<bool> plastic;
 };
 
 struct VoxMaterial {
-    uint32_t materialId;
-    VoxMaterialProperties materialProperties;
+    uint32_t materialId = 0;
+    VoxMaterialProperty property;
 };
 
 /////////////////////////////////////////////
@@ -115,9 +104,9 @@ struct VoxLayerAttributes {
 };
 
 struct VoxLayer {
-    uint32_t layerId;
+    uint32_t layerId = 0;
     VoxLayerAttributes attributes;
-    int32_t _reservedId;
+    int32_t _reservedId = 0;
 };
 
 /////////////////////////////////////////////
@@ -150,17 +139,20 @@ private:
 
     void readHeader(std::ifstream &file, VoxScene &scene);
     void readChunk(std::ifstream &file, VoxScene &scene);
-    void readSIZE(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene);
-    void readXYZI(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene);
-    void readRGBA(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene);
-    void readTransformNode(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene);
-    void readGroupNode(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene);
-    void readShapeNode(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene);
-    void readMaterial(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene);
-    void readLayer(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene);
-    void readRenderObject(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene);
-    void readPaletteNote(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene);
-    void readIndexMap(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene);
+    void readSIZE(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene);
+    void readXYZI(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene);
+    void readRGBA(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene);
+    void readTransformNode(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene);
+    void readGroupNode(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene);
+    void readShapeNode(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene);
+    void readMaterial(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene);
+    void readLayer(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene);
+    void readRenderObject(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene);
+    void readPaletteNote(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene);
+    void readIndexMap(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene);
 
-    VoxNodeAttribute parseNodeAttributes(std::string_view content);
+    VoxNodeAttribute parseNodeAttribute(std::unordered_map<std::string, std::string> &content);
+    VoxFrameAttribute parseFrameAttribute(std::unordered_map<std::string, std::string> &content);
+    VoxModelAttribute parseModelAttribute(std::unordered_map<std::string, std::string> &content);
+    VoxMaterialProperty parseMaterialProperty(std::unordered_map<std::string, std::string> &content);
 };
