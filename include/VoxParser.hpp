@@ -21,11 +21,17 @@ struct VoxModel {
 };
 
 /////////////////////////////////////////////
-// Extented version of the .vox format
+// Nodes
 /////////////////////////////////////////////
 struct VoxNodeAttribute {
     std::string name;
     bool hidden;
+};
+
+struct VoxNode {
+    virtual ~VoxNode() = default;
+
+    VoxNodeAttribute nodeAttribute;
 };
 
 struct VoxFrameAttribute {
@@ -46,6 +52,29 @@ struct VoxModelAttributes {
     std::unordered_map<std::string, VoxModelAttribute> data;
 };
 
+struct VoxTransformNode : public VoxNode {
+    uint32_t childId;
+    int32_t _reservedId;
+    uint32_t layerId;
+    uint32_t nbFrames;
+    VoxFrameAttributes frameAttributes;
+};
+
+struct VoxGroupNode : public VoxNode {
+    uint32_t nbChildren;
+    std::vector<uint32_t> childrenIdx;
+};
+
+struct VoxShapeNode : public VoxNode {
+    uint32_t nbModels;
+    std::vector<uint32_t> modelId;
+    std::vector<VoxModelAttributes> modelAttributes;
+};
+
+/////////////////////////////////////////////
+// Layer
+/////////////////////////////////////////////
+
 struct VoxLayerAttribute {
     std::string name;
     bool hidden;
@@ -53,27 +82,6 @@ struct VoxLayerAttribute {
 
 struct VoxLayerAttributes {
     std::unordered_map<std::string, VoxLayerAttributes> data;
-};
-
-/////////////////////////////////////////////
-
-struct VoxTransform {
-    uint32_t nodeId;
-    VoxNodeAttribute nodeAttribute;
-    uint32_t childId;
-    int32_t _reservedId;
-    uint32_t layerId;
-    uint32_t nbFrames;
-
-    VoxFrameAttributes frameAttributes;
-};
-
-struct VoxGroup {
-    uint32_t nodeId;
-    VoxNodeAttribute nodeAttribute;
-    uint32_t nbChildren;
-
-    std::vector<uint32_t> childrenIdx;
 };
 
 struct VoxLayer {
@@ -89,8 +97,7 @@ struct VoxScene {
     uint32_t version = 0;
     std::vector<VoxModel> models;
     std::array<glm::u8vec4, 256> palette;
-    std::vector<VoxTransform> transforms;
-    std::vector<VoxGroup> groups;
+    std::unordered_map<uint32_t, std::unique_ptr<VoxNode>> nodes;
     std::vector<VoxLayer> layers;
 };
 
@@ -107,7 +114,7 @@ private:
     uint32_t readUint32(std::ifstream &file);
     int32_t readInt32(std::ifstream &file);
     std::string readString(std::ifstream &file);
-    void readDict(std::ifstream &file, std::unordered_map<std::string, std::string>& dict);
+    void readDict(std::ifstream &file, std::unordered_map<std::string, std::string> &dict);
     std::string uint32ToStr(uint32_t value);
 
     void readHeader(std::ifstream &file, VoxScene &scene);

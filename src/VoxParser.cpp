@@ -116,6 +116,9 @@ void VoxParser::readChunk(std::ifstream &file, VoxScene &scene) {
         case 0x5052476E: // nGRP
             readGroupNode(file, chunkContentLength, nbChildrenChunks, scene);
             break;
+        case 0x5048536E: // nSHP
+            readShapeNode(file, chunkContentLength, nbChildrenChunks, scene);
+            break;
         case 0x5259414C: // LAYR
             readLayer(file, chunkContentLength, nbChildrenChunks, scene);
             break;
@@ -186,8 +189,11 @@ void VoxParser::readRGBA(std::ifstream &file, uint32_t size, uint32_t nbChilren,
 void VoxParser::readTransformNode(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
     auto before = file.tellg();
 
-    auto &transform = scene.transforms.emplace_back(VoxTransform());
-    transform.nodeId = readUint32(file);
+    auto nodeId = readUint32(file);
+
+    scene.nodes[nodeId] = std::make_unique<VoxTransformNode>();
+    auto &ptr = scene.nodes[nodeId];
+    VoxTransformNode &transform = dynamic_cast<VoxTransformNode &>(*ptr);
 
     std::unordered_map<std::string, std::string> nodeAttributesStr;
     readDict(file, nodeAttributesStr);
@@ -218,8 +224,11 @@ void VoxParser::readTransformNode(std::ifstream &file, uint32_t size, uint32_t n
 void VoxParser::readGroupNode(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
     auto before = file.tellg();
 
-    auto &group = scene.groups.emplace_back(VoxGroup());
-    group.nodeId = readUint32(file);
+    auto nodeId = readUint32(file);
+
+    scene.nodes[nodeId] = std::make_unique<VoxGroupNode>();
+    auto &ptr = scene.nodes[nodeId];
+    VoxGroupNode &group = dynamic_cast<VoxGroupNode &>(*ptr);
 
     std::unordered_map<std::string, std::string> nodeAttributesStr;
     readDict(file, nodeAttributesStr);
@@ -239,14 +248,45 @@ void VoxParser::readGroupNode(std::ifstream &file, uint32_t size, uint32_t nbChi
     assert(after - before == size);
 }
 
-void VoxParser::readShapeNode(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {}
+void VoxParser::readShapeNode(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
+    auto before = file.tellg();
+
+    auto nodeId = readUint32(file);
+
+    scene.nodes[nodeId] = std::make_unique<VoxShapeNode>();
+    auto &ptr = scene.nodes[nodeId];
+    VoxShapeNode &shape = dynamic_cast<VoxShapeNode &>(*ptr);
+
+    std::unordered_map<std::string, std::string> nodeAttributesStr;
+    readDict(file, nodeAttributesStr);
+    if (nodeAttributesStr.count("_name"))
+        shape.nodeAttribute.name = nodeAttributesStr["_name"];
+    if (nodeAttributesStr.count("_hidden"))
+        shape.nodeAttribute.hidden = (nodeAttributesStr["_hidden"] == "1");
+
+    shape.nbModels = readUint32(file);
+    if (shape.nbModels <= 0)
+        LOG_ERROR("Shape node \'{}\' must have at least 1 model.");
+
+    for (size_t i = 0; i < shape.nbModels; i++) {
+        shape.modelId.push_back(readUint32(file));
+        std::unordered_map<std::string, std::string> modelAttributeStr;
+        readDict(file, modelAttributeStr);
+
+        // TODO: Parse the modelAttributesStr
+    }
+
+    auto after = file.tellg();
+    // Safe check, never reach (normaly)
+    assert(after - before == size);
+}
 
 void VoxParser::readMaterial(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {}
 
 void VoxParser::readLayer(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
     auto before = file.tellg();
 
-    auto& layer = scene.layers.emplace_back(VoxLayer());
+    auto &layer = scene.layers.emplace_back(VoxLayer());
     layer.layerId = readUint32(file);
 
     std::unordered_map<std::string, std::string> layerAttributesStr;
