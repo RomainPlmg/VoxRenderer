@@ -72,6 +72,36 @@ struct VoxShapeNode : public VoxNode {
 };
 
 /////////////////////////////////////////////
+// Material
+/////////////////////////////////////////////
+
+enum class VoxMatType {
+    Diffuse,
+    Metal,
+    Glass,
+    Emit,
+};
+
+struct VoxMaterialProperty {
+    VoxMatType type;
+    float weight;
+    float rough;
+    float spec;
+    float ior;
+    float att;
+    bool plastic;
+};
+
+struct VoxMaterialProperties {
+    std::unordered_map<std::string, VoxMaterialProperty> data;
+};
+
+struct VoxMaterial {
+    uint32_t materialId;
+    VoxMaterialProperties materialProperties;
+};
+
+/////////////////////////////////////////////
 // Layer
 /////////////////////////////////////////////
 
@@ -99,6 +129,7 @@ struct VoxScene {
     std::array<glm::u8vec4, 256> palette;
     std::unordered_map<uint32_t, std::unique_ptr<VoxNode>> nodes;
     std::vector<VoxLayer> layers;
+    std::vector<VoxMaterial> materials;
 };
 
 /////////////////////////////////////////////

@@ -119,6 +119,9 @@ void VoxParser::readChunk(std::ifstream &file, VoxScene &scene) {
         case 0x5048536E: // nSHP
             readShapeNode(file, chunkContentLength, nbChildrenChunks, scene);
             break;
+        case 0x4C54414D: // MATL
+            readMaterial(file, chunkContentLength, nbChildrenChunks, scene);
+            break;
         case 0x5259414C: // LAYR
             readLayer(file, chunkContentLength, nbChildrenChunks, scene);
             break;
@@ -281,7 +284,21 @@ void VoxParser::readShapeNode(std::ifstream &file, uint32_t size, uint32_t nbChi
     assert(after - before == size);
 }
 
-void VoxParser::readMaterial(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {}
+void VoxParser::readMaterial(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
+    auto before = file.tellg();
+
+    auto &material = scene.materials.emplace_back(VoxMaterial());
+    material.materialId = readInt32(file);
+
+    std::unordered_map<std::string, std::string> materialPropertyStr;
+    readDict(file, materialPropertyStr);
+
+    // TODO : Parse the materialPropertyStr
+
+    auto after = file.tellg();
+    // Safe check, never reach (normaly)
+    assert(after - before == size);
+}
 
 void VoxParser::readLayer(std::ifstream &file, uint32_t size, uint32_t nbChilren, VoxScene &scene) {
     auto before = file.tellg();
