@@ -24,7 +24,10 @@ public:
     [[nodiscard]] VkDevice device() const { return m_device; }
     vkb::Swapchain &swapChain() { return m_swapChain; }
     VmaAllocator &allocator() { return m_allocator; }
-    uint32_t imgIdx() const { return m_imgIdx; }
+    [[nodiscard]] uint32_t imgIdx() const { return m_imgIdx; }
+
+    void cleanupSwapChain();
+    void createSwapChain(int width, int height);
 
 private:
     // Core

@@ -4,6 +4,8 @@
 #include <memory>
 #include <typeindex>
 
+#include "Logger.hpp"
+
 class EventBus {
 public:
     template<typename T>
@@ -11,6 +13,9 @@ public:
 
     template<typename T>
     void publish(const T &event);
+
+    template<typename T>
+    void publishSync(const T &event);
 
     void pollEvents();
 
@@ -32,4 +37,15 @@ void EventBus::subscribe(std::function<void(const T &)> callback) {
 template<typename T>
 void EventBus::publish(const T &event) {
     m_queue.push_back({typeid(T), std::make_shared<T>(event)});
+}
+
+template<typename T>
+void EventBus::publishSync(const T &event) {
+    if (!m_callbacks.contains(typeid(T))) {
+        LOG_WARN("Event {} emitted but no subscribers, skip...", typeid(T).name());
+        return;
+    }
+    for (auto &callback: m_callbacks[typeid(T)]) {
+        callback(static_cast<const void *>(&event));
+    }
 }

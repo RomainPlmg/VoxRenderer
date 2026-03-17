@@ -1,10 +1,18 @@
 #include "Renderer.hpp"
 
+#include "Application.hpp"
+#include "Events.hpp"
+#include "Logger.hpp"
+
 bool Renderer::init(uint32_t width, uint32_t height) {
     createStorageImage(width, height);
 
     m_width = width;
     m_height = height;
+
+    // Subscribe to the event bus
+    Application::get().getEventBus().subscribe<WindowResizeEvent>(
+            [this](const auto &e) { onResize(e.width, e.height); });
 
     return true;
 }
@@ -83,6 +91,33 @@ void Renderer::render(VkCommandBuffer cmd) {
     vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0,
                          nullptr, 2, barriers2);
+}
+
+void Renderer::onResize(int width, int height) {
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(Application::get().getWindow().getHandle(), &width, &height);
+        glfwWaitEvents();
+    }
+
+    m_width = width;
+    m_height = height;
+
+    vkDeviceWaitIdle(m_ctx.device());
+
+    m_ctx.createSwapChain(width, height);
+
+    vmaDestroyImage(m_ctx.allocator(), m_storageImage, m_storageAllocation);
+    vkDestroyImageView(m_ctx.device(), m_storageImageView, nullptr);
+
+    createStorageImage(m_width, m_height);
+
+    VkDescriptorImageInfo imageInfo{};
+    imageInfo.imageView = m_storageImageView;
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+    Application::get().getEventBus().publishSync(StorageImageRecreatedEvent{
+            .imageView = m_storageImageView,
+    });
 }
 
 void Renderer::shutdown() {

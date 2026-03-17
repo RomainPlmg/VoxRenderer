@@ -31,4 +31,6 @@ public:
 private:
     WindowSpecification m_specification;
     GLFWwindow *m_handle = nullptr;
+
+    static void framebufferResizeCallback(GLFWwindow *window, int width, int height);
 };

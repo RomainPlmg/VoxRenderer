@@ -8,6 +8,7 @@ public:
 
     bool init(uint32_t width, uint32_t height);
     void render(VkCommandBuffer cmd);
+    void onResize(int width, int height);
     void shutdown();
 
     [[nodiscard]] VkImage storageImage() const { return m_storageImage; }

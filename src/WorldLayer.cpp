@@ -1,11 +1,19 @@
 #include "WorldLayer.hpp"
 #include <memory>
 #include <vector>
+
+#include "Application.hpp"
 #include "ComputePass.hpp"
+#include "Events.hpp"
 #include "Renderer.hpp"
 #include "VkContext.hpp"
 
-WorldLayer::WorldLayer(const std::filesystem::path &voxFile) { m_parser.parse(voxFile, m_scene); }
+WorldLayer::WorldLayer(const std::filesystem::path &voxFile) {
+    m_parser.parse(voxFile, m_scene);
+
+    Application::get().getEventBus().subscribe<StorageImageRecreatedEvent>(
+            [this](const auto &e) { m_svoPass->bindImage(0, e.imageView, VK_IMAGE_LAYOUT_GENERAL); });
+}
 
 void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
     std::vector<VkDescriptorSetLayoutBinding> bindings;

@@ -1,4 +1,6 @@
 #include "VkContext.hpp"
+
+#include "Application.hpp"
 #include "Logger.hpp"
 
 // Callback for validation layers
@@ -260,4 +262,26 @@ void VkContext::submitOneShot(std::function<void(VkCommandBuffer)> fn) {
     vkQueueWaitIdle(m_graphicsQueue);
 
     vkFreeCommandBuffers(m_device, m_cmdPool, 1, &cmd);
+}
+
+void VkContext::cleanupSwapChain() { vkb::destroy_swapchain(m_swapChain); }
+
+void VkContext::createSwapChain(int width, int height) {
+    vkDeviceWaitIdle(m_device);
+
+    vkb::SwapchainBuilder swapchainBuilder{m_device};
+    auto sc_ret = vkb::SwapchainBuilder{m_device}
+                          .set_old_swapchain(m_swapChain)
+                          .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+                          .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT) // Blit from compute shader
+                          .set_desired_extent(width, height)
+                          .build();
+
+    if (!sc_ret) {
+        LOG_ERROR("{}.", sc_ret.error().message());
+        return;
+    }
+
+    cleanupSwapChain();
+    m_swapChain = sc_ret.value();
 }

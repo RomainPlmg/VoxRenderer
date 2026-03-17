@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 
+#include "Application.hpp"
+#include "Events.hpp"
 #include "Logger.hpp"
 #include "VkContext.hpp"
 
@@ -16,6 +18,9 @@ void Window::init() {
         throw std::runtime_error("Failed to create GLFW window.");
     }
 
+    glfwSetWindowUserPointer(m_handle, this);
+
+    glfwSetFramebufferSizeCallback(m_handle, framebufferResizeCallback);
     LOG_INFO("Window initialized.");
 }
 
@@ -32,4 +37,11 @@ glm::vec2 Window::getFrameBufferSize() const {
     int width, height;
     glfwGetFramebufferSize(m_handle, &width, &height);
     return {width, height};
+}
+
+void Window::framebufferResizeCallback(GLFWwindow *window, int width, int height) {
+    Application::get().getEventBus().publish(WindowResizeEvent{
+            .width = width,
+            .height = height,
+    });
 }
