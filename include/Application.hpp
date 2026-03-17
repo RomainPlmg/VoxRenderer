@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "EventBus.hpp"
 #include "Layer.hpp"
 #include "Window.hpp"
 
@@ -42,6 +43,11 @@ public:
         return *m_renderer;
     }
 
+    [[nodiscard]] EventBus &getEventBus() const {
+        assert(m_eventBus);
+        return *m_eventBus;
+    }
+
     static Application &get();
     static float getTime();
 
@@ -50,6 +56,7 @@ private:
     std::unique_ptr<Window> m_window;
     std::unique_ptr<VkContext> m_vkContext;
     std::unique_ptr<Renderer> m_renderer;
+    std::unique_ptr<EventBus> m_eventBus;
     std::vector<std::unique_ptr<Layer>> m_layerStack;
 
     float m_accuTime = 0.0f;

@@ -28,6 +28,8 @@ Application::Application(const ApplicationSpecification &specification) : m_spec
         m_specification.window_spec.title = m_specification.name;
     }
 
+    m_eventBus = std::make_unique<EventBus>();
+
     m_window = std::make_unique<Window>(m_specification.window_spec);
     m_vkContext = std::make_unique<VkContext>();
 
@@ -75,6 +77,7 @@ void Application::run() {
     // Main application loop
     while (m_running) {
         glfwPollEvents();
+        m_eventBus->pollEvents();
 
         if (m_window->shouldClose()) {
             stop();
