@@ -291,13 +291,15 @@ void VoxParser::readShapeNode(std::ifstream &file, uint32_t size, uint32_t nbChi
 void VoxParser::readMaterial(std::ifstream &file, uint32_t size, uint32_t nbChildren, VoxScene &scene) {
     auto before = file.tellg();
 
-    auto &material = scene.materials.emplace_back(VoxMaterial());
-    material.materialId = readInt32(file);
+    auto materialId = readUint32(file);
+    if (materialId <= 256) {
+        auto &material = scene.materials[materialId - 1] = VoxMaterialProperty{};
 
-    std::unordered_map<std::string, std::string> materialPropertyStr;
-    readDict(file, materialPropertyStr);
+        std::unordered_map<std::string, std::string> materialPropertyStr;
+        readDict(file, materialPropertyStr);
 
-    material.property = parseMaterialProperty(materialPropertyStr);
+        material = parseMaterialProperty(materialPropertyStr);
+    }
 
     auto after = file.tellg();
     // Safe check, never reach (normally)

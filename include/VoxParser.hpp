@@ -85,11 +85,6 @@ struct VoxMaterialProperty {
     std::optional<bool> plastic;
 };
 
-struct VoxMaterial {
-    uint32_t materialId = 0;
-    VoxMaterialProperty property;
-};
-
 /////////////////////////////////////////////
 // Layer
 /////////////////////////////////////////////
@@ -118,7 +113,7 @@ struct VoxScene {
     std::array<glm::u8vec4, 256> palette;
     std::unordered_map<uint32_t, std::unique_ptr<VoxNode>> nodes;
     std::vector<VoxLayer> layers;
-    std::vector<VoxMaterial> materials;
+    std::array<VoxMaterialProperty, 256> materials;
 };
 
 /////////////////////////////////////////////

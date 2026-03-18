@@ -124,7 +124,7 @@ void fillGrid(uint32_t nodeId, SceneContext ctx, const VoxScene &scene, GridCont
         glm::ivec3 offset = ctx.translation - gridContext.sceneMin;
         for (const auto &voxel: model.voxels) {
             glm::ivec3 globalPos = glm::ivec3(voxel.coord) + offset;
-            uint32_t index = globalPos.x + (gridContext.sceneSize.y - 1 - globalPos.y) * gridContext.sceneSize.x +
+            uint32_t index = globalPos.x + globalPos.y * gridContext.sceneSize.x +
                              globalPos.z * gridContext.sceneSize.x * gridContext.sceneSize.y;
             gridContext.grid[index] = voxel.colorIndex;
         }
