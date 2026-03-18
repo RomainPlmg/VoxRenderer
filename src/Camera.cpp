@@ -28,9 +28,9 @@ void Camera::update(float ts) {
     if (Input::isKeyPressed(GLFW_KEY_S))
         dir -= frontXZ;
     if (Input::isKeyPressed(GLFW_KEY_SPACE))
-        dir -= worldUp;
-    if (Input::isKeyPressed(GLFW_KEY_LEFT_SHIFT))
         dir += worldUp;
+    if (Input::isKeyPressed(GLFW_KEY_LEFT_SHIFT))
+        dir -= worldUp;
 
     auto camPos = m_settings.position;
     camPos += dir * VELOCITY * ts;
@@ -41,7 +41,7 @@ void Camera::update(float ts) {
         glm::vec2 mousePos = Input::getMousePosition();
         glm::vec2 mouseOffset = (m_lastMousePos - mousePos) * m_settings.sensitivity * ts;
         m_yaw -= mouseOffset.x;
-        m_pitch -= mouseOffset.y;
+        m_pitch += mouseOffset.y;
 
         // Make sure that when pitch is out of bounds, screen doesn't get
         // flipped

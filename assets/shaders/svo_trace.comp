@@ -88,6 +88,8 @@ void main() {
     if (pixelCoords.x >= size.x || pixelCoords.y >= size.y) return;
 
     vec2 uv = (vec2(pixelCoords) / vec2(size)) * 2.0 - 1.0;
+    uv.y = 1.0 - uv.y; // In Vulkan, vertical axis target the bottom
+
     vec4 target = pc.camera.invProj * vec4(uv, 1.0, 1.0);
 
     // Initialize the ray
