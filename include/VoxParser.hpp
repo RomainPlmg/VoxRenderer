@@ -68,10 +68,10 @@ struct VoxShapeNode : VoxNode {
 /////////////////////////////////////////////
 
 enum class VoxMatType {
-    Diffuse,
-    Metal,
-    Glass,
-    Emit,
+    Diffuse = 0,
+    Metal = 1,
+    Glass = 2,
+    Emit = 3,
 };
 
 struct VoxMaterialProperty {

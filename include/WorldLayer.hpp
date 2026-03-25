@@ -14,6 +14,7 @@ struct WorldLayerInfo {
     VkDeviceAddress cameraAddress = 0;
     VkDeviceAddress voxelGridAddress = 0;
     VkDeviceAddress paletteAddress = 0;
+    VkDeviceAddress materialAddress = 0;
 };
 
 class WorldLayer final : public Layer {

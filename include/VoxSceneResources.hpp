@@ -1,18 +1,29 @@
 #pragma once
 
 #include <vk_mem_alloc.h>
-#include "VkCommon.hpp"
 #include "VoxParser.hpp"
+
+#include "Buffer.hpp"
 
 struct GpuModelHeader {
     glm::uvec4 size = glm::uvec4(0);
 };
 
+struct GpuMaterial {
+    uint32_t type;
+    float weight;
+    float rough;
+    float spec;
+    float ior;
+    float att;
+    float flux;
+    float _pad;
+};
+
 struct VoxSceneResources {
-    VkBuffer buffer[2] = {VK_NULL_HANDLE};
-    VmaAllocation allocation[2] = {VK_NULL_HANDLE};
-    VmaAllocationInfo allocInfo[2]{};
-    VkDeviceAddress address[2] = {0};
+    std::unique_ptr<UniformBuffer> voxelBuffer;
+    std::unique_ptr<UniformBuffer> paletteBuffer;
+    std::unique_ptr<UniformBuffer> materialBuffer;
 
     void init(VkDevice device, VmaAllocator allocator, const VoxScene &scene);
     void destroy();

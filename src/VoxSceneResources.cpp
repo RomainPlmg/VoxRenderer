@@ -1,5 +1,4 @@
 #include "VoxSceneResources.hpp"
-#include "VkContext.hpp"
 
 /////////////////////////////////////////////
 // Context structures for scene graph navigation
@@ -15,10 +14,10 @@ struct GridContext {
     glm::ivec3 sceneMin;
 };
 
-// Recursive function to traverse the scene graph
 void computeBoundingBox(uint32_t nodeId, SceneContext ctx, const VoxScene &scene, glm::ivec3 &sceneMin,
                         glm::ivec3 &sceneMax);
 void fillGrid(uint32_t nodeId, SceneContext ctx, const VoxScene &scene, GridContext &gridContext);
+GpuMaterial toGPUMaterial(const VoxMaterialProperty &material);
 
 void VoxSceneResources::init(VkDevice device, VmaAllocator allocator, const VoxScene &scene) {
     m_allocator = allocator;
@@ -36,55 +35,29 @@ void VoxSceneResources::init(VkDevice device, VmaAllocator allocator, const VoxS
     };
     fillGrid(0, {}, scene, gridContext);
 
-    VkBufferCreateInfo voxelBufferInfo{
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = grid.size() * sizeof(uint32_t) + sizeof(GpuModelHeader),
-            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-    };
+    std::array<GpuMaterial, 256> gpuMaterials;
+    for (size_t i = 0; i < gpuMaterials.size(); i++) {
+        gpuMaterials[i] = toGPUMaterial(scene.materials[i]);
+    }
 
-    VkBufferCreateInfo paletteBufferInfo{
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = scene.palette.size() * sizeof(glm::u8vec4),
-            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-    };
+    voxelBuffer = std::make_unique<UniformBuffer>(device, m_allocator,
+                                                  grid.size() * sizeof(uint32_t) + sizeof(GpuModelHeader));
+    paletteBuffer = std::make_unique<UniformBuffer>(device, m_allocator, scene.palette.size() * sizeof(glm::u8vec4));
+    materialBuffer = std::make_unique<UniformBuffer>(device, m_allocator, gpuMaterials.size() * sizeof(GpuMaterial));
 
-    VmaAllocationCreateInfo allocCreateInfo{
-            .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-            .usage = VMA_MEMORY_USAGE_AUTO,
-    };
-
-    VK_CHECK(vmaCreateBuffer(m_allocator, &voxelBufferInfo, &allocCreateInfo, &buffer[0], &allocation[0],
-                             &allocInfo[0]));
-    VK_CHECK(vmaCreateBuffer(m_allocator, &paletteBufferInfo, &allocCreateInfo, &buffer[1], &allocation[1],
-                             &allocInfo[1]));
-
-    VkBufferDeviceAddressInfo voxelAddrInfo{
-            .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-            .buffer = buffer[0],
-    };
-
-    VkBufferDeviceAddressInfo paletteAddrInfo{
-            .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-            .buffer = buffer[1],
-    };
-
-    address[0] = vkGetBufferDeviceAddress(device, &voxelAddrInfo);
-    address[1] = vkGetBufferDeviceAddress(device, &paletteAddrInfo);
-
-    // Fill the voxel grid
-    auto *mapped0 = static_cast<uint8_t *>(allocInfo[0].pMappedData);
     GpuModelHeader header{.size = glm::uvec4(sceneSize, 0)};
-    memcpy(mapped0, &header, sizeof(GpuModelHeader));
-    memcpy(mapped0 + sizeof(GpuModelHeader), grid.data(), grid.size() * sizeof(uint32_t));
+    voxelBuffer->emplace(&header, sizeof(GpuModelHeader));
+    voxelBuffer->emplace(grid.data(), grid.size() * sizeof(uint32_t), sizeof(header));
 
-    // Fill the color palette array
-    auto *mapped1 = static_cast<glm::u8vec4 *>(allocInfo[1].pMappedData);
-    memcpy(mapped1, scene.palette.data(), scene.palette.size() * sizeof(glm::u8vec4));
+    paletteBuffer->emplace(scene.palette.data(), scene.palette.size() * sizeof(uint32_t));
+
+    materialBuffer->emplace(gpuMaterials.data(), gpuMaterials.size() * sizeof(GpuMaterial));
 }
 
 void VoxSceneResources::destroy() {
-    vmaDestroyBuffer(m_allocator, buffer[0], allocation[0]);
-    vmaDestroyBuffer(m_allocator, buffer[1], allocation[1]);
+    voxelBuffer->destroy();
+    paletteBuffer->destroy();
+    materialBuffer->destroy();
 }
 
 void computeBoundingBox(uint32_t nodeId, SceneContext ctx, const VoxScene &scene, glm::ivec3 &sceneMin,
@@ -129,4 +102,25 @@ void fillGrid(uint32_t nodeId, SceneContext ctx, const VoxScene &scene, GridCont
             gridContext.grid[index] = voxel.colorIndex;
         }
     }
+}
+
+GpuMaterial toGPUMaterial(const VoxMaterialProperty &material) {
+    GpuMaterial gpuMaterial{};
+
+    if (material.type.has_value())
+        gpuMaterial.type = static_cast<uint32_t>(material.type.value());
+    if (material.weight.has_value())
+        gpuMaterial.weight = material.weight.value();
+    if (material.rough.has_value())
+        gpuMaterial.rough = material.rough.value();
+    if (material.spec.has_value())
+        gpuMaterial.spec = material.spec.value();
+    if (material.ior.has_value())
+        gpuMaterial.ior = material.ior.value();
+    if (material.att.has_value())
+        gpuMaterial.att = material.att.value();
+    if (material.flux.has_value())
+        gpuMaterial.flux = material.flux.value();
+
+    return gpuMaterial;
 }
