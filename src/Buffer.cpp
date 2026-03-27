@@ -1,10 +1,13 @@
 #include "Buffer.hpp"
 
-UniformBuffer::UniformBuffer(VkDevice device, VmaAllocator allocator, size_t size) : m_allocator(allocator) {
+// ===========================
+// Storage Buffer
+// ===========================
+StorageBuffer::StorageBuffer(VkDevice device, VmaAllocator allocator, size_t size) : m_allocator(allocator) {
     VkBufferCreateInfo bufferInfo{
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .size = size,
-            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+            .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
     };
 
     VmaAllocationCreateInfo allocCreateInfo{
@@ -22,12 +25,12 @@ UniformBuffer::UniformBuffer(VkDevice device, VmaAllocator allocator, size_t siz
     m_address = vkGetBufferDeviceAddress(device, &addrInfo);
 }
 
-UniformBuffer::~UniformBuffer() {
+StorageBuffer::~StorageBuffer() {
     if (m_buffer != VK_NULL_HANDLE)
         destroy();
 }
 
-void UniformBuffer::destroy() {
+void StorageBuffer::destroy() {
     vmaDestroyBuffer(m_allocator, m_buffer, m_allocation);
     m_buffer = VK_NULL_HANDLE;
 }

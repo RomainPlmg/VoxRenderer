@@ -21,9 +21,9 @@ struct GpuMaterial {
 };
 
 struct VoxSceneResources {
-    std::unique_ptr<UniformBuffer> voxelBuffer;
-    std::unique_ptr<UniformBuffer> paletteBuffer;
-    std::unique_ptr<UniformBuffer> materialBuffer;
+    std::unique_ptr<StorageBuffer> voxelBuffer;
+    std::unique_ptr<StorageBuffer> paletteBuffer;
+    std::unique_ptr<StorageBuffer> materialBuffer;
 
     void init(VkDevice device, VmaAllocator allocator, const VoxScene &scene);
     void destroy();
