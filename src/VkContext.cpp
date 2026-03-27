@@ -145,7 +145,7 @@ bool VkContext::init(GLFWwindow *handle) {
 }
 
 void VkContext::shutdown() {
-    vkDeviceWaitIdle(m_device);
+    VK_CHECK(vkDeviceWaitIdle(m_device));
 
     for (uint32_t i = 0; i < FRAMES_IN_FLIGHT; ++i) {
         vkDestroySemaphore(m_device, m_imageAvailable[i], nullptr);
@@ -169,19 +169,20 @@ void VkContext::shutdown() {
 VkCommandBuffer VkContext::beginFrame() {
     auto frame = m_frame % FRAMES_IN_FLIGHT;
     // Waiting for the GPU to finish the last frame
-    vkWaitForFences(m_device, 1, &m_inFlight[frame], VK_TRUE, UINT64_MAX);
-    vkResetFences(m_device, 1, &m_inFlight[frame]);
+    VK_CHECK(vkWaitForFences(m_device, 1, &m_inFlight[frame], VK_TRUE, UINT64_MAX));
+    VK_CHECK(vkResetFences(m_device, 1, &m_inFlight[frame]));
 
     // Recover swapchain image index
-    vkAcquireNextImageKHR(m_device, m_swapChain, UINT64_MAX, m_imageAvailable[frame], VK_NULL_HANDLE, &m_imgIdx);
+    VK_CHECK(vkAcquireNextImageKHR(m_device, m_swapChain, UINT64_MAX, m_imageAvailable[frame], VK_NULL_HANDLE,
+                                   &m_imgIdx));
 
     // Reset the command buffer for the new frame
     auto cmd = m_cmdBuffers[frame];
-    vkResetCommandBuffer(cmd, 0);
+    VK_CHECK(vkResetCommandBuffer(cmd, 0));
 
     // Start to registers commands
     VkCommandBufferBeginInfo begin{.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-    vkBeginCommandBuffer(cmd, &begin);
+    VK_CHECK(vkBeginCommandBuffer(cmd, &begin));
 
     auto images = m_swapChain.get_images().value();
     VkImageMemoryBarrier barrier{
@@ -202,11 +203,11 @@ VkCommandBuffer VkContext::beginFrame() {
 }
 
 void VkContext::endFrame(VkCommandBuffer cmd) {
-    vkEndCommandBuffer(cmd);
+    VK_CHECK(vkEndCommandBuffer(cmd));
 
     auto frame = m_frame % FRAMES_IN_FLIGHT;
 
-    VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
             .waitSemaphoreCount = 1,
@@ -217,7 +218,7 @@ void VkContext::endFrame(VkCommandBuffer cmd) {
             .signalSemaphoreCount = 1,
             .pSignalSemaphores = &m_renderFinished[m_imgIdx],
     };
-    vkQueueSubmit(m_graphicsQueue, 1, &submit, m_inFlight[frame]);
+    VK_CHECK(vkQueueSubmit(m_graphicsQueue, 1, &submit, m_inFlight[frame]));
 
     // Present
     VkPresentInfoKHR present{
@@ -228,7 +229,7 @@ void VkContext::endFrame(VkCommandBuffer cmd) {
             .pSwapchains = &m_swapChain.swapchain,
             .pImageIndices = &m_imgIdx,
     };
-    vkQueuePresentKHR(m_presentQueue, &present);
+    VK_CHECK(vkQueuePresentKHR(m_presentQueue, &present));
 
     ++m_frame;
 }
@@ -242,33 +243,38 @@ void VkContext::submitOneShot(std::function<void(VkCommandBuffer)> fn) {
             .commandBufferCount = 1,
     };
     VkCommandBuffer cmd;
-    vkAllocateCommandBuffers(m_device, &alloc, &cmd);
+    VK_CHECK(vkAllocateCommandBuffers(m_device, &alloc, &cmd));
 
     VkCommandBufferBeginInfo begin{
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     };
-    vkBeginCommandBuffer(cmd, &begin);
+    VK_CHECK(vkBeginCommandBuffer(cmd, &begin));
 
     fn(cmd);
 
-    vkEndCommandBuffer(cmd);
+    VK_CHECK(vkEndCommandBuffer(cmd));
+
+    VkFenceCreateInfo fenceInfo{.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+    VkFence fence;
+    VK_CHECK(vkCreateFence(m_device, &fenceInfo, nullptr, &fence));
 
     VkSubmitInfo submit{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
             .commandBufferCount = 1,
             .pCommandBuffers = &cmd,
     };
-    vkQueueSubmit(m_graphicsQueue, 1, &submit, VK_NULL_HANDLE);
-    vkQueueWaitIdle(m_graphicsQueue);
+    VK_CHECK(vkQueueSubmit(m_graphicsQueue, 1, &submit, fence));
+    VK_CHECK(vkWaitForFences(m_device, 1, &fence, VK_TRUE, UINT64_MAX));
 
+    vkDestroyFence(m_device, fence, nullptr);
     vkFreeCommandBuffers(m_device, m_cmdPool, 1, &cmd);
 }
 
 void VkContext::cleanupSwapChain() { vkb::destroy_swapchain(m_swapChain); }
 
 void VkContext::createSwapChain(int width, int height) {
-    vkDeviceWaitIdle(m_device);
+    VK_CHECK(vkDeviceWaitIdle(m_device));
 
     vkb::SwapchainBuilder swapchainBuilder{m_device};
     auto sc_ret = vkb::SwapchainBuilder{m_device}
