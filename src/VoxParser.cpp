@@ -137,8 +137,8 @@ void VoxParser::readSIZE(std::ifstream &file, uint32_t size, uint32_t nbChildren
 
     auto &model = scene.models.emplace_back(VoxModel());
     model.size.x = readUint32(file);
-    model.size.y = readUint32(file);
     model.size.z = readUint32(file);
+    model.size.y = readUint32(file);
 
     LOG_INFO("Model of size {}x{}x{}.", model.size.x, model.size.y, model.size.z);
 

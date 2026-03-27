@@ -74,8 +74,10 @@ void computeBoundingBox(uint32_t nodeId, SceneContext ctx, const VoxScene &scene
             computeBoundingBox(childId, ctx, scene, sceneMin, sceneMax);
     } else if (auto *shp = dynamic_cast<VoxShapeNode *>(node.get())) {
         const auto &model = scene.models[shp->modelId[0]];
-        sceneMin = glm::min(sceneMin, ctx.translation);
-        sceneMax = glm::max(sceneMax, ctx.translation + glm::ivec3(model.size));
+        glm::ivec3 halfSize = glm::ivec3(model.size) / 2;
+
+        sceneMin = glm::min(sceneMin, ctx.translation - halfSize);
+        sceneMax = glm::max(sceneMax, ctx.translation - halfSize + glm::ivec3(model.size));
     }
 }
 
@@ -94,7 +96,8 @@ void fillGrid(uint32_t nodeId, SceneContext ctx, const VoxScene &scene, GridCont
 
     } else if (auto *shp = dynamic_cast<VoxShapeNode *>(node.get())) {
         const auto &model = scene.models[shp->modelId[0]];
-        glm::ivec3 offset = ctx.translation - gridContext.sceneMin;
+        glm::ivec3 halfSize = glm::ivec3(model.size) / 2;
+        glm::ivec3 offset = (ctx.translation - halfSize) - gridContext.sceneMin;
         for (const auto &voxel: model.voxels) {
             glm::ivec3 globalPos = glm::ivec3(voxel.coord) + offset;
             uint32_t index = globalPos.x + globalPos.y * gridContext.sceneSize.x +
