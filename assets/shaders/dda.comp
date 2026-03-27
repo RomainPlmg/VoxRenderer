@@ -155,7 +155,7 @@ HitInfo CalculateRayCollision(Ray ray) {
             hitInfo.hitPoint = ray.origin + ray.dir * dist;
             hitInfo.hitNormal = calculateNormal(stepMask, stepDir);
             hitInfo.colour = unpackRGBA(pc.palette.data[colorIdx]).rgb;
-            hitInfo.material = pc.material.data[173];
+            hitInfo.material = pc.material.data[colorIdx];
             break;
         }
     }
@@ -167,9 +167,9 @@ vec3 traceRay(Ray ray) {
     HitInfo hitInfo = CalculateRayCollision(ray);
 
     if (hitInfo.didHit) {
-        // if (hitInfo.material.type == 3) {
-        //     return hitInfo.colour * hitInfo.material.flux;
-        // }
+        if (hitInfo.material.type == 3) {
+            return hitInfo.colour;
+        }
         float diff = max(dot(hitInfo.hitNormal, SUN_DIR), 0.0);
         vec3 diffuse = hitInfo.colour * SUN_COLOR * diff;
         vec3 ambient = hitInfo.colour * 0.1; 

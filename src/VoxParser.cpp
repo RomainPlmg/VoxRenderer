@@ -292,16 +292,11 @@ void VoxParser::readMaterial(std::ifstream &file, uint32_t size, uint32_t nbChil
     auto before = file.tellg();
 
     auto materialId = readUint32(file);
-    if (materialId < 256) {
-        auto &material = scene.materials[materialId] = VoxMaterialProperty{};
+    std::unordered_map<std::string, std::string> materialPropertyStr;
+    readDict(file, materialPropertyStr);
 
-        std::unordered_map<std::string, std::string> materialPropertyStr;
-        readDict(file, materialPropertyStr);
-
-        material = parseMaterialProperty(materialPropertyStr);
-    } else {
-        std::unordered_map<std::string, std::string> materialPropertyStr;
-        readDict(file, materialPropertyStr);
+    if (materialId > 0 && materialId < 256) {
+        scene.materials[materialId] = parseMaterialProperty(materialPropertyStr);
     }
 
     auto after = file.tellg();
