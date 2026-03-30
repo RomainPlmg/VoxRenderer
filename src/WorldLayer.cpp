@@ -43,7 +43,7 @@ void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
     m_info.paletteAddress = m_sceneResources->paletteBuffer->address();
     m_info.materialAddress = m_sceneResources->materialBuffer->address();
 
-    m_svoPass->init(ASSETS_DIR "shaders/dda.comp.spv", bindings);
+    m_svoPass->init(ASSETS_DIR "shaders/main.comp.spv", bindings);
     m_svoPass->bindImage(0, renderer.storageImageView(), VK_IMAGE_LAYOUT_GENERAL);
 }
 

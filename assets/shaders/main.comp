@@ -1,0 +1,70 @@
+#version 460
+
+#extension GL_EXT_buffer_reference : require
+
+#include "dda.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;  // workgroup 8x8
+
+layout(push_constant) uniform PushConstants {
+    CameraData camera;
+    VoxelGridData voxelGrid;
+    PaletteData palette;
+    MaterialData material;
+} pc;
+layout(rgba8, binding = 0) uniform writeonly image2D outputImage;
+
+vec3 traceRay(Ray ray, VoxelGridData voxelGrid) {
+    HitInfo hitInfo = ddaRayCollision(ray, voxelGrid);
+
+    if (hitInfo.didHit) {
+        vec3 colour = unpackRGBA(pc.palette.data[hitInfo.colorIdx]).rgb;
+        Material matl = pc.material.data[hitInfo.colorIdx];
+
+        if (matl.type == 3) {
+            return colour;
+        }
+        float diff = max(dot(hitInfo.hitNormal, SUN_DIR), 0.0);
+        vec3 diffuse = colour * SUN_COLOR * diff;
+        vec3 ambient = colour * 0.1; 
+        return diffuse + ambient;
+    }
+
+    return vec3(0.0);;
+}
+
+// ===========================
+// Main
+// ===========================
+void main() {
+    ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(outputImage);
+
+    // If pixel out of the screen
+    if (pixelCoords.x >= size.x || pixelCoords.y >= size.y) return;
+
+    vec2 uv = vec2(pixelCoords) / vec2(size);
+    uv.y = 1.0 - uv.y; // In Vulkan, vertical axis target the bottom
+    vec2 d = uv * 2.0 - 1.0;
+
+    vec4 target = pc.camera.invProj * vec4(d, 1.0, 1.0);
+
+    // Initialize the ray
+    Ray ray;
+    ray.origin = pc.camera.position.xyz;
+    ray.dir = vec3(pc.camera.invView * vec4(normalize(vec3(target) / target.w), 0.0));
+
+    // Check if the ray intersect the model
+    vec2 hit = intersectAABB(ray, vec3(0.0), pc.voxelGrid.size.xyz);
+    if (hit.x > hit.y || hit.y < 0.0) { // No intersection
+        imageStore(outputImage, pixelCoords, vec4(vec3(0.0), 1.0));
+        return;
+    }
+
+    // Bring the ray origin to the model boundary
+    ray.origin = ray.origin + ray.dir * max(hit.x - EPSILON, 0.0);
+
+    vec3 colour = traceRay(ray, pc.voxelGrid);
+
+    imageStore(outputImage, pixelCoords, vec4(colour, 1.0));
+}
