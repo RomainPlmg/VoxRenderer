@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(svo_demo)
+project(vox_renderer)
 
 # ============================================================================
 # C++ Configuration
@@ -12,11 +12,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ============================================================================
 # Define executable
 # ============================================================================
-file(GLOB_RECURSE SVO_SRC src/*.cpp)
-add_executable(svo_demo ${SVO_SRC})
-target_include_directories(svo_demo PRIVATE include)
+file(GLOB_RECURSE VOX_SRC src/*.cpp)
+add_executable(vox_renderer ${VOX_SRC})
+target_include_directories(vox_renderer PRIVATE include)
 
-target_compile_definitions(svo_demo PRIVATE
+target_compile_definitions(vox_renderer PRIVATE
         ASSETS_DIR="${CMAKE_SOURCE_DIR}/assets/"
 )
 
@@ -74,7 +74,7 @@ FetchContent_MakeAvailable(glm)
 FetchContent_MakeAvailable(vk_bootstrap)
 FetchContent_MakeAvailable(VulkanMemoryAllocator)
 
-target_link_libraries(svo_demo PRIVATE
+target_link_libraries(vox_renderer PRIVATE
         spdlog::spdlog
         glfw
         glm::glm-header-only

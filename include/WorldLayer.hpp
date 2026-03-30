@@ -28,7 +28,7 @@ public:
     void onRender(VkCommandBuffer cmd, Renderer &renderer) override;
 
 private:
-    std::unique_ptr<ComputePass> m_svoPass;
+    std::unique_ptr<ComputePass> m_mainPass;
     std::unique_ptr<Camera> m_camera;
     std::unique_ptr<CameraResources> m_cameraResources;
     std::unique_ptr<VoxSceneResources> m_sceneResources;

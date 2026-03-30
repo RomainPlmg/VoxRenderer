@@ -12,7 +12,7 @@ WorldLayer::WorldLayer(const std::filesystem::path &voxFile) {
     m_parser.parse(voxFile, m_scene);
 
     Application::get().getEventBus().subscribe<StorageImageRecreatedEvent>(
-            [this](const auto &e) { m_svoPass->bindImage(0, e.imageView, VK_IMAGE_LAYOUT_GENERAL); });
+            [this](const auto &e) { m_mainPass->bindImage(0, e.imageView, VK_IMAGE_LAYOUT_GENERAL); });
 }
 
 void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
@@ -30,7 +30,7 @@ void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
             .sensitivity = 5.0f,
     };
 
-    m_svoPass = std::make_unique<ComputePass>(ctx);
+    m_mainPass = std::make_unique<ComputePass>(ctx);
     m_camera = std::make_unique<Camera>(camSettings);
     m_cameraResources = std::make_unique<CameraResources>();
     m_sceneResources = std::make_unique<VoxSceneResources>();
@@ -43,14 +43,14 @@ void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
     m_info.paletteAddress = m_sceneResources->paletteBuffer->address();
     m_info.materialAddress = m_sceneResources->materialBuffer->address();
 
-    m_svoPass->init(ASSETS_DIR "shaders/main.comp.spv", bindings);
-    m_svoPass->bindImage(0, renderer.storageImageView(), VK_IMAGE_LAYOUT_GENERAL);
+    m_mainPass->init(ASSETS_DIR "shaders/main.comp.spv", bindings);
+    m_mainPass->bindImage(0, renderer.storageImageView(), VK_IMAGE_LAYOUT_GENERAL);
 }
 
 void WorldLayer::onDetach() {
     m_cameraResources->destroy();
     m_sceneResources->destroy();
-    m_svoPass->shutdown();
+    m_mainPass->shutdown();
 }
 
 void WorldLayer::onEvent([[maybe_unused]] Event &event) {}
@@ -61,6 +61,6 @@ void WorldLayer::onUpdate([[maybe_unused]] float ts) {
 }
 
 void WorldLayer::onRender(VkCommandBuffer cmd, Renderer &renderer) {
-    m_svoPass->pushConstants<WorldLayerInfo>(cmd, m_info);
-    m_svoPass->dispatch(cmd, (renderer.width() + 7) / 8, (renderer.height() + 7) / 8);
+    m_mainPass->pushConstants<WorldLayerInfo>(cmd, m_info);
+    m_mainPass->dispatch(cmd, (renderer.width() + 7) / 8, (renderer.height() + 7) / 8);
 }

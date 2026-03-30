@@ -23,7 +23,7 @@ bool VkContext::init(GLFWwindow *handle) {
     vkb::InstanceBuilder builder;
 
     // --- Instance
-    auto inst_ret = builder.set_app_name("SVO Demo")
+    auto inst_ret = builder.set_app_name("Vox Renderer")
                             .require_api_version(1, 3, 0)
                             .request_validation_layers()
                             .set_debug_callback(debugCallback)
