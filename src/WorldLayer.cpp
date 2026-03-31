@@ -44,7 +44,7 @@ void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
     m_info.materialAddress = m_sceneResources->materialBuffer->address();
 
     m_mainPass->init(ASSETS_DIR "shaders/main.comp.spv", bindings);
-    m_mainPass->bindImage(0, renderer.storageImageView(), VK_IMAGE_LAYOUT_GENERAL);
+    m_mainPass->bindImage(0, renderer.blitImage().getView(), VK_IMAGE_LAYOUT_GENERAL);
 }
 
 void WorldLayer::onDetach() {
