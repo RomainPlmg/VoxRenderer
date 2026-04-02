@@ -19,6 +19,7 @@ public:
     /* Getters */
     VkImage getImage() const { return m_image; }
     VkImageView getView() const { return m_view; }
+    VkImageLayout getLayout() const { return m_currentLayout; }
 
 private:
     VkImageUsageFlags getUsageFlags(Type usage);

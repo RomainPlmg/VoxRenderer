@@ -1,6 +1,7 @@
 #include "Texture.hpp"
 
 #include <cassert>
+#include "Logger.hpp"
 
 void Texture::init(uint32_t width, uint32_t height, VkFormat format, Type usage) {
     VkImageCreateInfo imgInfo{
@@ -22,6 +23,7 @@ void Texture::init(uint32_t width, uint32_t height, VkFormat format, Type usage)
 
     assert(m_ctx.allocator() != VK_NULL_HANDLE && "VMA allocator not initialized");
     VK_CHECK(vmaCreateImage(m_ctx.allocator(), &imgInfo, &allocInfo, &m_image, &m_allocation, nullptr));
+    LOG_DEBUG("Texture created at {}", (void *) m_image);
 
     VkImageViewCreateInfo viewInfo{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -33,9 +35,7 @@ void Texture::init(uint32_t width, uint32_t height, VkFormat format, Type usage)
 
     VK_CHECK(vkCreateImageView(m_ctx.device(), &viewInfo, nullptr, &m_view));
 
-    m_ctx.submitOneShot([&](VkCommandBuffer cmd) {
-        transitionLayout(cmd, VK_IMAGE_LAYOUT_GENERAL);
-    });
+    m_ctx.submitOneShot([&](VkCommandBuffer cmd) { transitionLayout(cmd, VK_IMAGE_LAYOUT_GENERAL); });
 }
 
 void Texture::transitionLayout(VkCommandBuffer cmd, VkImageLayout newLayout) {
@@ -95,8 +95,13 @@ void Texture::transitionLayout(VkCommandBuffer cmd, VkImageLayout newLayout) {
 }
 
 void Texture::destroy() {
+    LOG_DEBUG("Texture destroyed at {}", (void *) m_image);
     vkDestroyImageView(m_ctx.device(), m_view, nullptr);
     vmaDestroyImage(m_ctx.allocator(), m_image, m_allocation);
+    m_image = VK_NULL_HANDLE;
+    m_view = VK_NULL_HANDLE;
+    m_allocation = VK_NULL_HANDLE;
+    m_currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
 VkImageUsageFlags Texture::getUsageFlags(Type usage) {
