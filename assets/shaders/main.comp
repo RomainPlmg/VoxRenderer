@@ -19,13 +19,15 @@ vec3 traceRay(Ray ray, VoxelGridData voxelGrid) {
 
     if (hitInfo.didHit) {
         vec3 colour = unpackRGBA(pc.palette.data[hitInfo.colorIdx]).rgb;
-        Ray shadowRay;
-        shadowRay.origin = hitInfo.hitPoint + hitInfo.hitNormal * EPSILON;
-        shadowRay.dir = normalize(SUN_DIR);
-        HitInfo shadowHitInfo = ddaRayCollision(shadowRay, voxelGrid);
+        Material matl = pc.material.data[hitInfo.colorIdx];
 
-        if (shadowHitInfo.didHit) {
-            colour *= 0.1;
+        if (matl.type != Emit) {
+            Ray shadowRay;
+            shadowRay.origin = hitInfo.hitPoint + hitInfo.hitNormal * EPSILON;
+            shadowRay.dir = normalize(SUN_DIR);
+            HitInfo shadowHitInfo = ddaRayCollision(shadowRay, voxelGrid);
+
+            if (shadowHitInfo.didHit) {
         }
 
         return colour;
