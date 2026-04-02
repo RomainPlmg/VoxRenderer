@@ -28,6 +28,8 @@ vec3 traceRay(Ray ray, VoxelGridData voxelGrid) {
             HitInfo shadowHitInfo = ddaRayCollision(shadowRay, voxelGrid);
 
             if (shadowHitInfo.didHit) {
+               colour *= 0.1;
+            }
         }
 
         return colour;
