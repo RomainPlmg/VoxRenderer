@@ -1,3 +1,6 @@
+#ifndef UTILS_GLSL
+#define UTILS_GLSL
+
 // ===========================
 // Utility functions
 // ===========================
@@ -33,7 +36,39 @@ vec3 calculateNormal(vec3 stepMask, vec3 stepDir) {
     }
 }
 
-vec3 getEnvironmentColour(Ray ray) {
-    float skyGradient = ray.dir.y + 1;
-    return mix(vec3(1.0), vec3(0.5, 0.7, 1.0), skyGradient);
+uint nextRandom(inout uint state) {
+    state = state * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
 }
+
+// Return a value between 0 & 1;
+float randomFloat(inout uint state) {
+    return float(nextRandom(state)) / 4294967295.0;
+}
+
+vec3 randomDirection(inout uint seed) {
+    for (int limit = 0; limit < 100; limit++) {
+        // Generate random direction in a cube -1 <-> 1
+        vec3 rndVector = vec3 (
+            randomFloat(seed) * 2.0 - 1,
+            randomFloat(seed) * 2.0 - 1,
+            randomFloat(seed) * 2.0 - 1
+        );
+
+        // This method generate a cube, then the edges are denser in points, so need to filter
+        // If the vector is in the sphere
+        if (dot(rndVector, rndVector) < 1.0) {
+            return normalize(rndVector);
+        }
+    }
+
+    return vec3(0.0);
+}
+
+vec3 randomHemisphereDirection(vec3 normal, inout uint seed) {
+    vec3 rndDir = randomDirection(seed);
+    return rndDir * sign(dot(normal, rndDir));
+}
+
+#endif // UTILS_GLSL

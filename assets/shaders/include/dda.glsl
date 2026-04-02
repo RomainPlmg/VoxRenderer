@@ -1,8 +1,11 @@
+#ifndef DDA_GLSL
+#define DDA_GLSL
+
 #include "types.glsl"
 #include "utils.glsl"
 #include "buffers.glsl"
 
-HitInfo ddaRayCollision(Ray ray, VoxelGridData voxelGrid) {
+HitInfo ddaRayCollision(Ray ray, VoxelGridData voxelGrid, uint maxSteps) {
     HitInfo hitInfo;
     hitInfo.didHit = false;
 
@@ -30,7 +33,7 @@ HitInfo ddaRayCollision(Ray ray, VoxelGridData voxelGrid) {
     vec3 lastStepMask = vec3(0.0);
 
     // DDA traversal
-    for (uint i = 0; i < 512; i++) {
+    for (uint i = 0; i < maxSteps; i++) {
         // Check if position is in the model volume
         if (any(lessThan(gridPos, vec3(0.0))) || 
             any(greaterThanEqual(gridPos, voxelGrid.size.xyz))) {
@@ -43,12 +46,25 @@ HitInfo ddaRayCollision(Ray ray, VoxelGridData voxelGrid) {
         if (colorIdx != 0) {
             hitInfo.didHit = true;
             hitInfo.colorIdx = colorIdx;
-            hitInfo.hitNormal = -lastStepMask * STEP;
 
-            float dist = tStart + dot(lastStepMask, tMax - DELTA) / dot(lastStepMask, VOXELSPERUNIT * abs(ray.dir));
-            dist += dot(lastStepMask, tMax - DELTA); 
+            if (i == 0) {
+                vec3 distanceToBoundary = abs(localEntry - round(localEntry));
+                if (distanceToBoundary.x < min(distanceToBoundary.y, distanceToBoundary.z)) {
+                    hitInfo.hitNormal = vec3(-STEP.x, 0, 0);
+                }
+                else if (distanceToBoundary.y < distanceToBoundary.z) {
+                    hitInfo.hitNormal = vec3(0, -STEP.y, 0);
+                }
+                else {
+                    hitInfo.hitNormal = vec3(0, 0, -STEP.z);
+                }
+            
+                hitInfo.hitDistance = tStart;
+            } else {
+                hitInfo.hitNormal = -lastStepMask * STEP;
+                hitInfo.hitDistance = tStart + dot(lastStepMask, tMax - DELTA);
+            }
 
-            hitInfo.hitDistance = dist;
             hitInfo.hitPoint = voxelGrid.sceneMin.xyz + (gridPos + vec3(0.5) + hitInfo.hitNormal * 0.5) / VOXELSPERUNIT;
             break;
         }
@@ -66,3 +82,5 @@ HitInfo ddaRayCollision(Ray ray, VoxelGridData voxelGrid) {
 
     return hitInfo;
 }
+
+#endif // DDA_GLSL

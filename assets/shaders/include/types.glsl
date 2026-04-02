@@ -1,3 +1,6 @@
+#ifndef TYPES_GLSL
+#define TYPES_GLSL
+
 // ===========================
 // Ray structure
 // ===========================
@@ -43,5 +46,9 @@ struct HitInfo {
 // Constants
 // ===========================
 const float EPSILON = 1e-5;
+const float AMBIENT_STRENGTH = 0.25;
 const vec3 SUN_DIR = normalize(vec3(-0.5, 1.0, 0.3));
 const vec3 SUN_COLOR = vec3(1.0, 0.9, 0.8);
+const uint NB_AO_RAYS = 8;
+
+#endif // TYPES_GLSL
