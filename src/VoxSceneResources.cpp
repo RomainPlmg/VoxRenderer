@@ -45,7 +45,11 @@ void VoxSceneResources::init(VkDevice device, VmaAllocator allocator, const VoxS
     paletteBuffer = std::make_unique<StorageBuffer>(device, m_allocator, scene.palette.size() * sizeof(glm::u8vec4));
     materialBuffer = std::make_unique<StorageBuffer>(device, m_allocator, gpuMaterials.size() * sizeof(GpuMaterial));
 
-    GpuModelHeader header{.size = glm::uvec4(sceneSize, 0)};
+    GpuModelHeader header{
+            .size = glm::uvec4(sceneSize, 0),
+            .sceneMin = glm::ivec4(sceneMin, 0),
+            .sceneMax = glm::ivec4(sceneMax, 0),
+    };
     voxelBuffer->emplace(&header, sizeof(GpuModelHeader));
     voxelBuffer->emplace(grid.data(), grid.size() * sizeof(uint32_t), sizeof(header));
 

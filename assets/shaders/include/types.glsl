@@ -42,6 +42,6 @@ struct HitInfo {
 // ===========================
 // Constants
 // ===========================
-const float EPSILON = 0.0001;
+const float EPSILON = 1e-5;
 const vec3 SUN_DIR = normalize(vec3(-0.5, 1.0, 0.3));
 const vec3 SUN_COLOR = vec3(1.0, 0.9, 0.8);

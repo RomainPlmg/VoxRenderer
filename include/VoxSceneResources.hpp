@@ -7,6 +7,8 @@
 
 struct GpuModelHeader {
     glm::uvec4 size = glm::uvec4(0);
+    glm::ivec4 sceneMin = glm::ivec4(0);
+    glm::ivec4 sceneMax = glm::ivec4(0);
 };
 
 struct GpuMaterial {

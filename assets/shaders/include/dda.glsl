@@ -6,44 +6,62 @@ HitInfo ddaRayCollision(Ray ray, VoxelGridData voxelGrid) {
     HitInfo hitInfo;
     hitInfo.didHit = false;
 
+    vec2 hit = intersectAABB(ray, voxelGrid.sceneMin.xyz, voxelGrid.sceneMax.xyz);
+    if (hit.x > hit.y || hit.y < 0.0) { // No intersection
+        return hitInfo;
+    }
+
+    // DDA constants
+    const vec3 VOXELSPERUNIT = voxelGrid.size.xyz / (voxelGrid.sceneMax.xyz - voxelGrid.sceneMin.xyz);
+
+    const vec3 safeDir = vec3(
+        abs(ray.dir.x) < 1e-7 ? 1e-7 : ray.dir.x,
+        abs(ray.dir.y) < 1e-7 ? 1e-7 : ray.dir.y,
+        abs(ray.dir.z) < 1e-7 ? 1e-7 : ray.dir.z
+    );
+    const vec3 STEP = sign(safeDir);
+    const vec3 DELTA = abs(1.0 / (safeDir * VOXELSPERUNIT));
+
     // DDA variables
-    vec3 gridPos = floor(ray.origin);
-    vec3 stepDir = sign(ray.dir);
-    vec3 tDist = abs(1.0/(ray.dir + EPSILON));
+    float tStart = max(hit.x + 1e-4, 0.0);
+    vec3 localEntry = (ray.origin + ray.dir * tStart - voxelGrid.sceneMin.xyz) * VOXELSPERUNIT;
+    vec3 gridPos = floor(localEntry);
+    vec3 tMax = abs((gridPos - localEntry + max(STEP, vec3(0.0))) * DELTA);
+    vec3 lastStepMask = vec3(0.0);
 
-    vec3 nextBoundary = gridPos + max(stepDir, vec3(0.0));
-    vec3 tMax = abs((nextBoundary - ray.origin) / ray.dir);
+    // DDA traversal
+    for (uint i = 0; i < 512; i++) {
+        // Check if position is in the model volume
+        if (any(lessThan(gridPos, vec3(0.0))) || 
+            any(greaterThanEqual(gridPos, voxelGrid.size.xyz))) {
+            break;
+        }
 
-    for (uint i = 0; i < 1000; i++) {
+        uint voxelIdx = uint(gridPos.x) + uint(gridPos.y) * voxelGrid.size.x + uint(gridPos.z) * voxelGrid.size.x * voxelGrid.size.y;
+        uint colorIdx = voxelGrid.data[voxelIdx];
+
+        if (colorIdx != 0) {
+            hitInfo.didHit = true;
+            hitInfo.colorIdx = colorIdx;
+            hitInfo.hitNormal = -lastStepMask * STEP;
+
+            float dist = tStart + dot(lastStepMask, tMax - DELTA) / dot(lastStepMask, VOXELSPERUNIT * abs(ray.dir));
+            dist += dot(lastStepMask, tMax - DELTA); 
+
+            hitInfo.hitDistance = dist;
+            hitInfo.hitPoint = voxelGrid.sceneMin.xyz + (gridPos + vec3(0.5) + hitInfo.hitNormal * 0.5) / VOXELSPERUNIT;
+            break;
+        }
+
         vec3 stepMask = vec3(
             float(tMax.x <= min(tMax.y, tMax.z)),
             float(tMax.y < min(tMax.x, tMax.z)),
             float(tMax.z < min(tMax.x, tMax.y))
         );
 
-        tMax += stepMask * tDist;
-        gridPos += vec3(stepMask) * stepDir;
-
-        // Check if position is in the model volume
-        if (any(lessThan(gridPos, vec3(-EPSILON))) || 
-            any(greaterThanEqual(gridPos, voxelGrid.size.xyz))) {
-            break;
-        }
-
-        uint voxelIdx = uint(gridPos.x) +
-                        uint(gridPos.y) * voxelGrid.size.x +
-                        uint(gridPos.z) * voxelGrid.size.x * voxelGrid.size.y;
-        uint colorIdx = voxelGrid.data[voxelIdx];
-
-        if (colorIdx != 0) {
-            hitInfo.didHit = true;
-            float dist = min(tMax.x, min(tMax.y, tMax.z)); 
-            hitInfo.hitDistance = dist;
-            hitInfo.hitPoint = ray.origin + ray.dir * dist;
-            hitInfo.hitNormal = calculateNormal(stepMask, stepDir);
-            hitInfo.colorIdx = colorIdx;
-            break;
-        }
+        lastStepMask = stepMask;
+        tMax += stepMask * DELTA;
+        gridPos += stepMask * STEP;
     }
 
     return hitInfo;

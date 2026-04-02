@@ -32,3 +32,8 @@ vec3 calculateNormal(vec3 stepMask, vec3 stepDir) {
         return vec3(0.0, 0.0, -stepDir.z);
     }
 }
+
+vec3 getEnvironmentColour(Ray ray) {
+    float skyGradient = ray.dir.y + 1;
+    return mix(vec3(1.0), vec3(0.5, 0.7, 1.0), skyGradient);
+}

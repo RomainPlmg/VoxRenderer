@@ -6,6 +6,8 @@ layout(buffer_reference, std430) readonly buffer CameraData {
 
 layout(buffer_reference, std430) readonly buffer VoxelGridData {
     uvec4 size;
+    ivec4 sceneMin;
+    ivec4 sceneMax;
     uint data[];
 };
 

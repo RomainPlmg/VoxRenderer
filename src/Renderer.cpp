@@ -5,7 +5,7 @@
 
 bool Renderer::init(uint32_t width, uint32_t height) {
     m_blitTexture = std::make_unique<Texture>(m_ctx);
-    m_blitTexture->init(width, height, VK_FORMAT_R8G8B8A8_UNORM, Texture::Type::StorageBlit);
+    m_blitTexture->init(width, height, VK_FORMAT_R16G16B16A16_SFLOAT, Texture::Type::StorageBlit);
     //     createStorageImage(width, height);
 
     m_width = width;
@@ -108,7 +108,7 @@ void Renderer::onResize(int width, int height) {
     m_ctx.createSwapChain(width, height);
 
     m_blitTexture->destroy();
-    m_blitTexture->init(width, height, VK_FORMAT_R8G8B8A8_UNORM, Texture::Type::StorageBlit);
+    m_blitTexture->init(width, height, VK_FORMAT_R16G16B16A16_SFLOAT, Texture::Type::StorageBlit);
 
     VkDescriptorImageInfo imageInfo{};
     imageInfo.imageView = m_blitTexture->getView();
