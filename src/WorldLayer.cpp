@@ -38,7 +38,7 @@ void WorldLayer::onAttach(VkContext &ctx, Renderer &renderer) {
     m_cameraResources->init(ctx.device(), ctx.allocator());
     m_sceneResources->init(ctx.device(), ctx.allocator(), m_scene);
 
-    m_info.cameraAddress = m_cameraResources->address;
+    m_info.cameraAddress = m_cameraResources->buffer->address();
     m_info.voxelGridAddress = m_sceneResources->voxelBuffer->address();
     m_info.paletteAddress = m_sceneResources->paletteBuffer->address();
     m_info.materialAddress = m_sceneResources->materialBuffer->address();
